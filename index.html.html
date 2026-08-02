@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>คลังสินค้า — Stock Ledger</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
+:root{
+  --paper:#EEF0E7;
+  --paper-deep:#E4E7DA;
+  --surface:#FFFFFF;
+  --ink:#202B22;
+  --ink-soft:#5C6B5E;
+  --ink-faint:#93A092;
+  --border:#D7DCC7;
+  --green:#2F6B4F;
+  --green-tint:#E3EEE6;
+  --rust:#B5442E;
+  --rust-tint:#F5E6E1;
+  --amber:#C98A2C;
+  --amber-tint:#FBEED9;
+  --shadow: 0 1px 2px rgba(32,43,34,0.06), 0 6px 16px rgba(32,43,34,0.05);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{background-color:var(--paper);color:var(--ink);font-family:'Noto Sans Thai','IBM Plex Mono',sans-serif;min-height:100vh;}
+.font-display{font-family:'Kanit','Noto Sans Thai',sans-serif;}
+.font-mono{font-family:'IBM Plex Mono',monospace;}
+.app{position:relative;max-width:1180px;margin:0 auto;padding:28px 24px 80px;}
+
+/* ---------- header ---------- */
+.header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:22px;padding-bottom:18px;border-bottom:2px solid var(--ink);}
+.header .brand-mark{display:flex;align-items:center;gap:12px;}
+.brand-badge{width:44px;height:44px;border:2px solid var(--ink);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Kanit';font-weight:700;font-size:15px;transform:rotate(-3deg);flex-shrink:0;background:var(--surface);}
+.header h1{font-family:'Kanit';font-weight:700;font-size:26px;margin:0;letter-spacing:0.2px;}
+.header .sub{font-size:12.5px;color:var(--ink-soft);margin-top:3px;font-family:'IBM Plex Mono';display:flex;align-items:center;gap:6px;}
+.conn-dot{width:8px;height:8px;border-radius:50%;background:var(--ink-faint);display:inline-block;flex-shrink:0;}
+.conn-dot.ok{background:var(--green);}
+.conn-dot.err{background:var(--rust);}
+.header-actions{display:flex;gap:8px;align-items:center;}
+.btn{font-family:'Noto Sans Thai';font-weight:600;font-size:13.5px;border-radius:5px;border:1.5px solid var(--ink);padding:9px 16px;cursor:pointer;background:var(--surface);color:var(--ink);transition:transform .12s ease, box-shadow .12s ease;display:inline-flex;align-items:center;gap:6px;}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--shadow);}
+.btn:active{transform:translateY(0);}
+.btn-primary{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+.btn-ghost{border-color:var(--border);color:var(--ink-soft);}
+.btn-ghost:hover{border-color:var(--ink);color:var(--ink);}
+.btn-amber{background:var(--amber);border-color:var(--amber);color:#fff;}
+.btn-outline-green{border-color:var(--green);color:var(--green);background:var(--green-tint);}
+.btn-outline-green:hover{background:var(--green);color:#fff;}
+.btn-outline-rust{border-color:var(--rust);color:var(--rust);background:var(--rust-tint);}
+.btn-outline-rust:hover{background:var(--rust);color:#fff;}
+.btn-rust{background:var(--rust);border-color:var(--rust);color:#fff;}
+.btn-sm{padding:7px 10px;font-size:12.5px;border-radius:4px;}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;}
+
+/* ---------- setup banner ---------- */
+.setup-banner{border:2px dashed var(--amber);background:var(--amber-tint);border-radius:10px;padding:26px 24px;margin-bottom:22px;}
+.setup-banner h3{font-family:'Kanit';font-size:18px;margin:0 0 8px;}
+.setup-banner p{font-size:13.5px;color:var(--ink-soft);line-height:1.6;margin:0 0 6px;}
+.setup-banner code{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-family:'IBM Plex Mono';font-size:12.5px;}
+.setup-banner ol{margin:10px 0 0;padding-left:20px;font-size:13.5px;color:var(--ink-soft);line-height:1.9;}
+.setup-banner a{color:var(--amber);}
+
+/* ---------- stats ---------- */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--amber);}
+.stat-card.green::before{background:var(--green);}
+.stat-card.rust::before{background:var(--rust);}
+.stat-card.blue::before{background:#3D5A80;}
+.stat-label{font-size:11px;color:var(--ink-soft);font-family:'IBM Plex Mono';letter-spacing:.3px;}
+.stat-value{font-family:'Kanit';font-weight:700;font-size:24px;margin-top:4px;}
+.stat-value span{font-size:12.5px;font-family:'Noto Sans Thai';font-weight:500;color:var(--ink-soft);margin-left:4px;}
+
+/* ---------- activity strip ---------- */
+.activity{background:var(--surface);border:1px dashed var(--border);border-radius:8px;padding:10px 14px;margin-bottom:20px;display:flex;align-items:center;gap:14px;overflow-x:auto;}
+.activity-label{font-family:'IBM Plex Mono';font-size:11px;color:var(--ink-faint);flex-shrink:0;letter-spacing:.4px;text-transform:uppercase;border-right:1px dashed var(--border);padding-right:14px;}
+.activity-empty{font-size:12.5px;color:var(--ink-faint);font-style:italic;}
+.activity-item{flex-shrink:0;display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono';font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);white-space:nowrap;}
+.activity-item b{font-family:'Noto Sans Thai';font-weight:600;color:var(--ink);}
+.activity-item.in{color:var(--green);border-color:var(--green);background:var(--green-tint);}
+.activity-item.out{color:var(--rust);border-color:var(--rust);background:var(--rust-tint);}
+
+/* ---------- controls ---------- */
+.controls{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+.search-box{flex:1;min-width:220px;position:relative;}
+.search-box input{width:100%;padding:10px 14px 10px 34px;border:1.5px solid var(--border);border-radius:6px;font-family:'Noto Sans Thai';font-size:14px;background:var(--surface);color:var(--ink);}
+.search-box input:focus{outline:none;border-color:var(--ink);}
+.search-box::before{content:'⌕';position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-faint);font-size:16px;}
+select.cat-filter{padding:10px 12px;border:1.5px solid var(--border);border-radius:6px;font-family:'Noto Sans Thai';font-size:13.5px;background:var(--surface);color:var(--ink);cursor:pointer;}
+select.cat-filter:focus{outline:none;border-color:var(--ink);}
+
+/* ---------- product grid ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:16px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:9px;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .15s ease, transform .15s ease;}
+.card:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
+.card-img-wrap{position:relative;aspect-ratio:1/1;background:var(--paper-deep);overflow:hidden;}
+.card-img-wrap img{width:100%;height:100%;object-fit:cover;display:block;}
+.card-img-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Kanit';font-weight:700;font-size:34px;color:var(--ink-faint);}
+.stamp{position:absolute;top:9px;right:9px;font-family:'IBM Plex Mono';font-weight:700;font-size:10px;letter-spacing:.5px;padding:3px 8px;border-radius:3px;border:1.5px dashed currentColor;transform:rotate(-7deg);background:rgba(255,255,255,0.88);text-transform:uppercase;}
+.stamp.normal{color:var(--green);}
+.stamp.low{color:var(--amber);}
+.stamp.out{color:var(--rust);background:rgba(255,255,255,.92);}
+.card-body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px;flex:1;}
+.card-title{font-family:'Kanit';font-weight:600;font-size:15.5px;line-height:1.25;}
+.card-meta{display:flex;gap:6px;flex-wrap:wrap;font-family:'IBM Plex Mono';font-size:10.5px;color:var(--ink-soft);}
+.card-meta span{border:1px solid var(--border);padding:2px 6px;border-radius:3px;background:var(--paper);}
+.stock-row{display:flex;align-items:baseline;gap:5px;padding-top:6px;border-top:1px dotted var(--border);margin-top:2px;}
+.stock-num{font-family:'IBM Plex Mono';font-weight:700;font-size:24px;}
+.stock-unit{font-size:12px;color:var(--ink-soft);}
+.value-row{font-family:'IBM Plex Mono';font-size:11.5px;color:var(--ink-soft);margin-top:-4px;}
+.value-row b{color:var(--amber);}
+.card-actions{display:flex;gap:6px;margin-top:2px;}
+.card-actions .btn{flex:1;justify-content:center;padding:8px 6px;font-size:12.5px;}
+.card-footer{display:flex;justify-content:space-between;font-family:'IBM Plex Mono';font-size:10.5px;color:var(--ink-faint);margin-top:4px;}
+.card-footer a{color:var(--ink-soft);cursor:pointer;text-decoration:none;border-bottom:1px dotted var(--ink-faint);}
+.card-footer a:hover{color:var(--ink);}
+
+/* ---------- empty state ---------- */
+.empty-state{text-align:center;padding:70px 20px;color:var(--ink-soft);border:2px dashed var(--border);border-radius:10px;}
+.empty-state .icon{font-size:38px;margin-bottom:10px;}
+.empty-state h3{font-family:'Kanit';font-weight:600;font-size:18px;color:var(--ink);margin:0 0 6px;}
+.empty-state p{font-size:13.5px;margin:0 0 16px;}
+
+/* ---------- modal ---------- */
+.overlay{position:fixed;inset:0;background:rgba(32,43,34,0.45);display:none;align-items:center;justify-content:center;z-index:50;padding:20px;}
+.overlay.show{display:flex;}
+.modal{background:var(--surface);border-radius:10px;width:100%;max-width:420px;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.25);border:1px solid var(--border);}
+.modal-head{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--border);}
+.modal-head h3{font-family:'Kanit';font-weight:600;font-size:17px;margin:0;}
+.modal-close{cursor:pointer;font-size:20px;color:var(--ink-soft);background:none;border:none;line-height:1;padding:4px;}
+.modal-close:hover{color:var(--ink);}
+.modal-body{padding:18px;display:flex;flex-direction:column;gap:14px;}
+.field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;font-family:'Noto Sans Thai';}
+.field .hint{font-size:11px;color:var(--ink-faint);margin-top:4px;font-family:'IBM Plex Mono';}
+.field input[type=text],.field input[type=number],.field textarea,.field select{width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:6px;font-family:'Noto Sans Thai';font-size:14px;color:var(--ink);background:var(--paper);}
+.field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--ink);}
+.field-row{display:flex;gap:10px;}
+.field-row .field{flex:1;}
+.img-upload{border:2px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;aspect-ratio:1/1;max-height:160px;position:relative;cursor:pointer;overflow:hidden;background:var(--paper);}
+.img-upload img{width:100%;height:100%;object-fit:cover;}
+.img-upload .placeholder{font-size:12px;color:var(--ink-faint);text-align:center;padding:10px;font-family:'IBM Plex Mono';}
+.img-upload input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.modal-foot{padding:14px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;}
+
+/* smart price calculator */
+.price-field-wrap{position:relative;}
+.calc-toggle-link{font-size:11.5px;color:var(--amber);cursor:pointer;text-decoration:none;border-bottom:1px dotted var(--amber);font-family:'IBM Plex Mono';display:inline-block;margin-top:5px;}
+.calc-toggle-link:hover{color:#a5721f;}
+.calc-panel{display:none;margin-top:10px;padding:12px;border:1.5px dashed var(--amber);border-radius:8px;background:var(--amber-tint);flex-direction:column;gap:8px;}
+.calc-panel.show{display:flex;}
+.calc-panel .field-row{gap:8px;}
+.calc-panel label{font-size:11px;}
+.calc-result{font-family:'IBM Plex Mono';font-size:12.5px;color:var(--ink);background:var(--surface);border-radius:5px;padding:7px 10px;border:1px solid var(--border);}
+.calc-result b{color:var(--amber);font-size:14px;}
+
+/* stock modal specifics */
+.stock-preview{display:flex;align-items:center;justify-content:space-between;background:var(--paper);border:1px dashed var(--border);border-radius:8px;padding:12px 14px;font-family:'IBM Plex Mono';}
+.stock-preview .arrow{color:var(--ink-faint);}
+.stock-preview .before{font-size:15px;color:var(--ink-soft);}
+.stock-preview .after{font-size:20px;font-weight:700;}
+.type-toggle{display:flex;gap:8px;}
+.type-toggle button{flex:1;padding:10px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface);font-family:'Noto Sans Thai';font-weight:600;font-size:13.5px;cursor:pointer;color:var(--ink-soft);}
+.type-toggle button.active.in{border-color:var(--green);background:var(--green-tint);color:var(--green);}
+.type-toggle button.active.out{border-color:var(--rust);background:var(--rust-tint);color:var(--rust);}
+
+/* ---------- history drawer ---------- */
+.drawer-overlay{position:fixed;inset:0;background:rgba(32,43,34,0.4);display:none;z-index:60;}
+.drawer-overlay.show{display:block;}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:100%;max-width:420px;background:var(--surface);box-shadow:-8px 0 30px rgba(0,0,0,0.15);transform:translateX(100%);transition:transform .25s ease;display:flex;flex-direction:column;z-index:61;}
+.drawer.show{transform:translateX(0);}
+.drawer-head{padding:18px;border-bottom:2px solid var(--ink);display:flex;gap:12px;align-items:center;}
+.drawer-head img{width:52px;height:52px;object-fit:cover;border-radius:6px;border:1px solid var(--border);}
+.drawer-head .ph{width:52px;height:52px;border-radius:6px;border:1px solid var(--border);background:var(--paper-deep);display:flex;align-items:center;justify-content:center;font-family:Kanit;font-weight:700;color:var(--ink-faint);}
+.drawer-head h3{font-family:'Kanit';font-size:16px;margin:0;}
+.drawer-head .stock-now{font-family:'IBM Plex Mono';font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
+.drawer-close{margin-left:auto;background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-soft);}
+.ledger-list{flex:1;overflow-y:auto;padding:8px 18px 18px;}
+.ledger-empty{text-align:center;color:var(--ink-faint);font-size:13px;padding:40px 10px;}
+.ledger-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px dotted var(--border);gap:10px;}
+.ledger-left{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.ledger-date{font-family:'IBM Plex Mono';font-size:11px;color:var(--ink-faint);}
+.ledger-note{font-size:12.5px;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:210px;}
+.ledger-right{text-align:right;flex-shrink:0;}
+.ledger-qty{font-family:'IBM Plex Mono';font-weight:700;font-size:15px;}
+.ledger-qty.in{color:var(--green);}
+.ledger-qty.out{color:var(--rust);}
+.ledger-bal{font-family:'IBM Plex Mono';font-size:10.5px;color:var(--ink-faint);}
+
+/* toast */
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:24px;font-size:13px;font-family:'Noto Sans Thai';opacity:0;pointer-events:none;transition:all .25s ease;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,0.2);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.confirm-body p{font-size:13.5px;color:var(--ink-soft);line-height:1.5;}
+
+/* ---------- smart search palette ---------- */
+.palette-overlay{position:fixed;inset:0;background:rgba(32,43,34,0.5);display:none;z-index:80;align-items:flex-start;justify-content:center;padding:12vh 16px 16px;}
+.palette-overlay.show{display:flex;}
+.palette{width:100%;max-width:560px;background:var(--surface);border-radius:12px;box-shadow:0 24px 70px rgba(0,0,0,0.3);overflow:hidden;display:flex;flex-direction:column;max-height:70vh;border:1px solid var(--border);}
+.palette-input-row{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:2px solid var(--ink);}
+.palette-input-row .icon{font-size:18px;color:var(--ink-faint);}
+.palette-input-row input{flex:1;border:none;outline:none;font-family:'Noto Sans Thai';font-size:16px;background:transparent;color:var(--ink);}
+.palette-input-row .kbd{font-family:'IBM Plex Mono';font-size:10.5px;color:var(--ink-faint);border:1px solid var(--border);border-radius:4px;padding:2px 6px;}
+.palette-results{overflow-y:auto;padding:8px;}
+.palette-empty{text-align:center;color:var(--ink-faint);font-size:13px;padding:36px 10px;font-family:'IBM Plex Mono';}
+.palette-row{display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;cursor:default;}
+.palette-row:hover{background:var(--paper);}
+.palette-row img{width:38px;height:38px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex-shrink:0;}
+.palette-row .ph{width:38px;height:38px;border-radius:6px;border:1px solid var(--border);background:var(--paper-deep);display:flex;align-items:center;justify-content:center;font-family:Kanit;font-weight:700;color:var(--ink-faint);flex-shrink:0;font-size:14px;}
+.palette-info{flex:1;min-width:0;}
+.palette-name{font-family:'Kanit';font-weight:600;font-size:14px;}
+.palette-name mark{background:var(--amber-tint);color:var(--amber);border-radius:2px;padding:0 1px;}
+.palette-sub{font-family:'IBM Plex Mono';font-size:11px;color:var(--ink-soft);}
+.palette-actions{display:flex;gap:5px;flex-shrink:0;}
+.palette-actions button{width:30px;height:30px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;}
+.palette-actions .pin{border-color:var(--green);color:var(--green);}
+.palette-actions .pin:hover{background:var(--green);color:#fff;}
+.palette-actions .pout{border-color:var(--rust);color:var(--rust);}
+.palette-actions .pout:hover{background:var(--rust);color:#fff;}
+.palette-foot{border-top:1px solid var(--border);padding:8px 14px;font-family:'IBM Plex Mono';font-size:10.5px;color:var(--ink-faint);display:flex;justify-content:space-between;}
+
+@media (max-width:600px){
+  .stats{grid-template-columns:repeat(2,1fr);}
+  .header{flex-direction:column;align-items:flex-start;gap:10px;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="brand-mark">
+      <div class="brand-badge">คส</div>
+      <div>
+        <h1>คลังสินค้าของฉัน</h1>
+        <div class="sub"><span class="conn-dot" id="connDot"></span><span id="connText">กำลังเชื่อมต่อฐานข้อมูล...</span></div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-ghost btn-sm" id="resetBtn">ล้างข้อมูล</button>
+      <button class="btn btn-amber" id="quickSearchBtn">🔍 ค้นหาด่วน <span style="opacity:.7;font-size:11px;">(/)</span></button>
+      <button class="btn btn-primary" id="addProductBtn">+ เพิ่มสินค้า</button>
+    </div>
+  </div>
+
+  <div class="setup-banner" id="setupBanner" style="display:none;">
+    <h3>🔧 ยังไม่ได้เชื่อมต่อฐานข้อมูล Firebase</h3>
+    <p>เปิดไฟล์ <code>inventory-app.html</code> นี้ด้วยโปรแกรมแก้ไขข้อความ (เช่น Notepad, VS Code) แล้วมองหาตัวแปร <code>firebaseConfig</code> ใกล้ท้ายไฟล์ จากนั้นใส่ค่าที่ได้จากโปรเจกต์ Firebase ของคุณแทนที่ข้อความ "ใส่..." ทั้งหมด</p>
+    <ol>
+      <li>ไปที่ <a href="https://console.firebase.google.com" target="_blank" rel="noopener">console.firebase.google.com</a> แล้วสร้างโปรเจกต์ใหม่ (ฟรี)</li>
+      <li>เมนูซ้าย → Build → Firestore Database → Create database → เลือก Start in test mode</li>
+      <li>Project settings (รูปเฟือง) → เลื่อนลงมา "Your apps" → กดไอคอน <code>&lt;/&gt;</code> เพื่อเพิ่มเว็บแอป → ตั้งชื่อแล้วกด Register</li>
+      <li>คัดลอกก้อนโค้ด <code>firebaseConfig</code> ที่ขึ้นมา มาแปะแทนที่ในไฟล์นี้</li>
+      <li>บันทึกไฟล์ แล้วอัปโหลดขึ้น GitHub / รีเฟรชหน้านี้ใหม่</li>
+    </ol>
+  </div>
+
+  <div id="appMain">
+    <div class="stats">
+      <div class="stat-card amber">
+        <div class="stat-label">สินค้าทั้งหมด</div>
+        <div class="stat-value" id="statCount">0<span>รายการ</span></div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">คงคลังรวม</div>
+        <div class="stat-value" id="statStock">0<span>หน่วย</span></div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-label">มูลค่าคงคลัง</div>
+        <div class="stat-value" id="statValue">฿0</div>
+      </div>
+      <div class="stat-card rust">
+        <div class="stat-label">รายการวันนี้</div>
+        <div class="stat-value" id="statToday">0<span>ครั้ง</span></div>
+      </div>
+    </div>
+
+    <div class="activity" id="activityStrip">
+      <div class="activity-label">ล่าสุด</div>
+      <div class="activity-empty">ยังไม่มีความเคลื่อนไหว</div>
+    </div>
+
+    <div class="controls">
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="กรองสินค้าในหน้านี้...">
+      </div>
+      <select class="cat-filter" id="catFilter">
+        <option value="">ทุกหมวดหมู่</option>
+      </select>
+    </div>
+
+    <div class="grid" id="productGrid"></div>
+
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <div class="icon">📦</div>
+      <h3>ยังไม่มีสินค้าในคลัง</h3>
+      <p>เริ่มต้นเพิ่มสินค้าชิ้นแรกของคุณ พร้อมรูปภาพและจำนวนเริ่มต้น</p>
+      <button class="btn btn-primary" id="emptyAddBtn">+ เพิ่มสินค้าแรก</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Product Add/Edit Modal -->
+<div class="overlay" id="productOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="productModalTitle">เพิ่มสินค้าใหม่</h3>
+      <button class="modal-close" data-close="productOverlay">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>รูปภาพสินค้า</label>
+        <div class="img-upload" id="imgUploadBox">
+          <div class="placeholder" id="imgPlaceholder">คลิกเพื่ออัปโหลดรูป<br>(แนะนำภาพสี่เหลี่ยมจัตุรัส)</div>
+          <img id="imgPreview" style="display:none;">
+          <input type="file" accept="image/*" id="imgInput">
+        </div>
+      </div>
+      <div class="field">
+        <label>ชื่อสินค้า *</label>
+        <input type="text" id="fName" placeholder="เช่น เสื้อยืดคอกลม สีขาว">
+      </div>
+      <div class="field">
+        <label>หมวดหมู่</label>
+        <input type="text" id="fCategory" list="categoryList" placeholder="เช่น เสื้อผ้า">
+        <datalist id="categoryList"></datalist>
+      </div>
+      <div class="field-row">
+        <div class="field" id="stockFieldWrap">
+          <label>จำนวนเริ่มต้น</label>
+          <input type="text" inputmode="decimal" id="fStock" placeholder="0 (ใส่ทศนิยมได้ เช่น 12.5)">
+          <div class="hint">นับไม่ได้ทีละชิ้น? ใส่เป็น กก./ลิตร/เมตร แล้วระบุหน่วยด้านขวาได้เลย</div>
+        </div>
+        <div class="field">
+          <label>หน่วยนับ</label>
+          <input type="text" id="fUnit" placeholder="ชิ้น, กก., ลิตร, เมตร">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field price-field-wrap">
+          <label>ราคาต่อหน่วย (บาท)</label>
+          <input type="text" inputmode="decimal" id="fPrice" placeholder="0.00">
+          <a class="calc-toggle-link" id="calcToggleLink">🧮 ไม่รู้ราคาต่อหน่วย? คำนวณจากยอดรวมที่จ่าย</a>
+          <div class="calc-panel" id="calcPanel">
+            <div class="field-row">
+              <div class="field">
+                <label>จำนวนที่ได้ทั้งหมด</label>
+                <input type="text" inputmode="decimal" id="calcQty" placeholder="เช่น 24">
+              </div>
+              <div class="field">
+                <label>ยอดเงินที่จ่ายรวม</label>
+                <input type="text" inputmode="decimal" id="calcTotal" placeholder="เช่น 480">
+              </div>
+            </div>
+            <div class="calc-result" id="calcResult">กรอกทั้งสองช่องเพื่อคำนวณราคาต่อหน่วยอัตโนมัติ</div>
+          </div>
+        </div>
+        <div class="field">
+          <label>แจ้งเตือนเมื่อคงเหลือต่ำกว่า</label>
+          <input type="text" inputmode="decimal" id="fMin" placeholder="เช่น 5">
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="deleteProductBtn" style="display:none;margin-right:auto;">ลบสินค้านี้</button>
+      <button class="btn btn-ghost" data-close="productOverlay">ยกเลิก</button>
+      <button class="btn btn-primary" id="saveProductBtn">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Stock In/Out Modal -->
+<div class="overlay" id="stockOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="stockModalTitle">รับเข้าสินค้า</h3>
+      <button class="modal-close" data-close="stockOverlay">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="type-toggle">
+        <button id="typeInBtn" class="in">↧ รับเข้า</button>
+        <button id="typeOutBtn" class="out">↥ จ่ายออก</button>
+      </div>
+      <div class="field">
+        <label>จำนวน</label>
+        <input type="text" inputmode="decimal" id="sQty" placeholder="0 (พิมพ์ 2*24 ได้ถ้ารับเป็นลัง)">
+        <div class="hint" id="sQtyHint"></div>
+      </div>
+      <div class="field">
+        <label>หมายเหตุ (ไม่บังคับ)</label>
+        <input type="text" id="sNote" placeholder="เช่น รับจากซัพพลายเออร์ / ขายหน้าร้าน">
+      </div>
+      <div class="stock-preview">
+        <div>
+          <div style="font-size:11px;color:var(--ink-faint);">คงเหลือปัจจุบัน</div>
+          <div class="before" id="sBefore">0</div>
+        </div>
+        <div class="arrow">→</div>
+        <div>
+          <div style="font-size:11px;color:var(--ink-faint);">คงเหลือใหม่</div>
+          <div class="after" id="sAfter">0</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close="stockOverlay">ยกเลิก</button>
+      <button class="btn btn-primary" id="saveStockBtn">บันทึกรายการ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="overlay" id="confirmOverlay">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-head">
+      <h3 id="confirmTitle">ยืนยันการลบ</h3>
+      <button class="modal-close" data-close="confirmOverlay">×</button>
+    </div>
+    <div class="modal-body confirm-body">
+      <p id="confirmMsg">คุณแน่ใจหรือไม่?</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close="confirmOverlay">ยกเลิก</button>
+      <button class="btn btn-rust" id="confirmActionBtn">ยืนยัน</button>
+    </div>
+  </div>
+</div>
+
+<!-- History Drawer -->
+<div class="drawer-overlay" id="drawerOverlay"></div>
+<div class="drawer" id="historyDrawer">
+  <div class="drawer-head">
+    <img id="drawerImg" style="display:none;">
+    <div class="ph" id="drawerPh" style="display:none;"></div>
+    <div>
+      <h3 id="drawerTitle">สินค้า</h3>
+      <div class="stock-now" id="drawerStock">คงเหลือ: 0</div>
+    </div>
+    <button class="drawer-close" id="drawerCloseBtn">×</button>
+  </div>
+  <div class="ledger-list" id="ledgerList"></div>
+</div>
+
+<!-- Smart Search Palette -->
+<div class="palette-overlay" id="paletteOverlay">
+  <div class="palette">
+    <div class="palette-input-row">
+      <div class="icon">🔍</div>
+      <input type="text" id="paletteInput" placeholder="พิมพ์ชื่อสินค้า หมวดหมู่ หรือแม้แต่พิมพ์ผิดก็หาเจอ...">
+      <div class="kbd">Esc</div>
+    </div>
+    <div class="palette-results" id="paletteResults"></div>
+    <div class="palette-foot">
+      <span>↧ รับเข้า / ↥ จ่ายออก ได้ทันทีจากผลค้นหา</span>
+      <span id="paletteCount">0 รายการ</span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   ตั้งค่า Firebase — แก้ไขค่าด้านล่างนี้ให้เป็นของโปรเจกต์คุณเอง
+   วิธีได้ค่านี้: Firebase Console → Project settings → Your apps
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyB9OXZpL0oWLb7pY2jhPC6QtRHxcd5HmsA",
+  authDomain: "stonk-58a84.firebaseapp.com",
+  projectId: "stonk-58a84",
+  storageBucket: "stonk-58a84.firebasestorage.app",
+  messagingSenderId: "195095034200",
+  appId: "1:195095034200:web:51f33e2db2e0ca82d10d2d"
+};
+
+let db = null;
+let state = { products: [], transactions: [] };
+let editingProductId = null;
+let stockTargetId = null;
+let stockType = 'in';
+let confirmCallback = null;
+let pendingImage = null;
+
+// ---------- helpers ----------
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function fmt(n){ return Number(n).toLocaleString('th-TH', {maximumFractionDigits:2}); }
+function fmtMoney(n){ return '฿' + Number(n||0).toLocaleString('th-TH', {maximumFractionDigits:2}); }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+function openOverlay(id){ document.getElementById(id).classList.add('show'); }
+function closeOverlay(id){ document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('[data-close]').forEach(btn=> btn.addEventListener('click', ()=> closeOverlay(btn.dataset.close)));
+document.querySelectorAll('.overlay').forEach(ov=> ov.addEventListener('click', (e)=>{ if(e.target === ov) closeOverlay(ov.id); }));
+
+// Safe math expression evaluator — supports things like "2*24+3" for bulk receiving
+// (boxes x pieces) without forcing manual one-by-one counting.
+function safeEval(expr){
+  if(expr == null) return NaN;
+  const cleaned = String(expr).trim().replace(',', '.');
+  if(cleaned === '') return NaN;
+  if(!/^[0-9+\-*/().\s]+$/.test(cleaned)) return NaN;
+  try{
+    const val = Function('"use strict"; return (' + cleaned + ')')();
+    return typeof val === 'number' && isFinite(val) ? val : NaN;
+  }catch(e){ return NaN; }
+}
+
+// ---------- Firebase init & realtime sync ----------
+function isConfigured(){
+  return !Object.values(firebaseConfig).some(v => String(v).includes('ใส่'));
+}
+
+function setConn(status, text){
+  const dot = document.getElementById('connDot');
+  dot.className = 'conn-dot' + (status ? ' '+status : '');
+  document.getElementById('connText').textContent = text;
+}
+
+function initApp(){
+  if(!isConfigured()){
+    document.getElementById('setupBanner').style.display = 'block';
+    document.getElementById('appMain').style.display = 'none';
+    setConn('err', 'ยังไม่ได้ตั้งค่า Firebase');
+    return;
+  }
+  document.getElementById('setupBanner').style.display = 'none';
+  document.getElementById('appMain').style.display = 'block';
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    setConn('', 'กำลังเชื่อมต่อฐานข้อมูล...');
+    db.collection('products').onSnapshot(snap=>{
+      state.products = snap.docs.map(d=>d.data());
+      setConn('ok', 'เชื่อมต่อฐานข้อมูลแล้ว · ข้อมูลซิงค์เรียลไทม์ทุกอุปกรณ์');
+      renderAll();
+    }, err=>{
+      setConn('err', 'เชื่อมต่อฐานข้อมูลไม่สำเร็จ: ' + err.message);
+    });
+    db.collection('transactions').onSnapshot(snap=>{
+      state.transactions = snap.docs.map(d=>d.data());
+      renderAll();
+    }, err=>{
+      setConn('err', 'เชื่อมต่อฐานข้อมูลไม่สำเร็จ: ' + err.message);
+    });
+  }catch(e){
+    setConn('err', 'ตั้งค่า Firebase ผิดพลาด: ' + e.message);
+  }
+}
+
+// ---------- render ----------
+function renderAll(){ renderStats(); renderActivity(); renderCategoryOptions(); renderGrid(); }
+
+function renderStats(){
+  document.getElementById('statCount').innerHTML = state.products.length + '<span>รายการ</span>';
+  const totalStock = state.products.reduce((s,p)=>s+Number(p.stock||0),0);
+  document.getElementById('statStock').innerHTML = fmt(totalStock) + '<span>หน่วย</span>';
+  const totalValue = state.products.reduce((s,p)=>s+Number(p.stock||0)*Number(p.price||0),0);
+  document.getElementById('statValue').textContent = fmtMoney(totalValue);
+  const today = todayStr();
+  const todayCount = state.transactions.filter(t=>t.date.slice(0,10)===today).length;
+  document.getElementById('statToday').innerHTML = todayCount + '<span>ครั้ง</span>';
+}
+
+function renderActivity(){
+  const wrap = document.getElementById('activityStrip');
+  const recent = [...state.transactions].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,10);
+  if(recent.length === 0){
+    wrap.innerHTML = '<div class="activity-label">ล่าสุด</div><div class="activity-empty">ยังไม่มีความเคลื่อนไหว</div>';
+    return;
+  }
+  wrap.innerHTML = '<div class="activity-label">ล่าสุด</div>' + recent.map(t=>{
+    const p = state.products.find(pr=>pr.id===t.productId);
+    const name = p ? p.name : 'สินค้าที่ถูกลบ';
+    const sign = t.type==='in' ? '+' : '−';
+    return `<div class="activity-item ${t.type}"><b>${escapeHtml(name)}</b> ${sign}${fmt(t.qty)}</div>`;
+  }).join('');
+}
+
+function renderCategoryOptions(){
+  const cats = [...new Set(state.products.map(p=>p.category).filter(Boolean))].sort();
+  const filter = document.getElementById('catFilter');
+  const current = filter.value;
+  filter.innerHTML = '<option value="">ทุกหมวดหมู่</option>' + cats.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  filter.value = cats.includes(current) ? current : '';
+  document.getElementById('categoryList').innerHTML = cats.map(c=>`<option value="${escapeHtml(c)}">`).join('');
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str == null ? '' : String(str);
+  return d.innerHTML;
+}
+
+function renderGrid(){
+  const search = document.getElementById('searchInput').value.trim().toLowerCase();
+  const cat = document.getElementById('catFilter').value;
+  let list = state.products.filter(p=>{
+    const matchSearch = !search || p.name.toLowerCase().includes(search);
+    const matchCat = !cat || p.category === cat;
+    return matchSearch && matchCat;
+  });
+  const grid = document.getElementById('productGrid');
+  const empty = document.getElementById('emptyState');
+
+  if(state.products.length === 0){ grid.style.display='none'; empty.style.display='block'; return; }
+  empty.style.display = 'none';
+  grid.style.display = 'grid';
+
+  if(list.length === 0){
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--ink-faint);font-size:13.5px;">ไม่พบสินค้าที่ตรงกับการค้นหา</div>`;
+    return;
+  }
+
+  grid.innerHTML = list.map(p=>{
+    const stock = Number(p.stock||0);
+    const min = Number(p.min||0);
+    let stampClass = 'normal', stampText = 'ปกติ';
+    if(stock <= 0){ stampClass='out'; stampText='หมด'; }
+    else if(min > 0 && stock <= min){ stampClass='low'; stampText='ใกล้หมด'; }
+
+    const imgHtml = p.image
+      ? `<img src="${p.image}" alt="${escapeHtml(p.name)}">`
+      : `<div class="card-img-placeholder">${escapeHtml((p.name||'?').slice(0,1).toUpperCase())}</div>`;
+
+    const value = stock * Number(p.price||0);
+
+    return `
+    <div class="card" data-id="${p.id}">
+      <div class="card-img-wrap">
+        ${imgHtml}
+        <div class="stamp ${stampClass}">${stampText}</div>
+      </div>
+      <div class="card-body">
+        <div class="card-title">${escapeHtml(p.name)}</div>
+        <div class="card-meta">
+          ${p.category ? `<span>${escapeHtml(p.category)}</span>` : ''}
+          ${p.price ? `<span>฿${fmt(p.price)}/${escapeHtml(p.unit||'ชิ้น')}</span>` : ''}
+        </div>
+        <div class="stock-row">
+          <div class="stock-num">${fmt(stock)}</div>
+          <div class="stock-unit">${escapeHtml(p.unit||'ชิ้น')}</div>
+        </div>
+        ${p.price ? `<div class="value-row">มูลค่ารวม: <b>${fmtMoney(value)}</b></div>` : ''}
+        <div class="card-actions">
+          <button class="btn btn-outline-green btn-sm" data-action="in" data-id="${p.id}">↧ รับเข้า</button>
+          <button class="btn btn-outline-rust btn-sm" data-action="out" data-id="${p.id}">↥ จ่ายออก</button>
+        </div>
+        <div class="card-footer">
+          <a data-action="history" data-id="${p.id}">ประวัติ</a>
+          <a data-action="edit" data-id="${p.id}">แก้ไข</a>
+          <a data-action="delete" data-id="${p.id}">ลบ</a>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('productGrid').addEventListener('click', (e)=>{
+  const target = e.target.closest('[data-action]');
+  if(!target) return;
+  const id = target.dataset.id, action = target.dataset.action;
+  if(action === 'in') openStockModal(id,'in');
+  else if(action === 'out') openStockModal(id,'out');
+  else if(action === 'history') openHistoryDrawer(id);
+  else if(action === 'edit') openProductModal(id);
+  else if(action === 'delete') askDeleteProduct(id);
+});
+document.getElementById('searchInput').addEventListener('input', renderGrid);
+document.getElementById('catFilter').addEventListener('change', renderGrid);
+
+// ---------- product modal ----------
+function openProductModal(id){
+  editingProductId = id || null;
+  pendingImage = null;
+  const p = id ? state.products.find(x=>x.id===id) : null;
+
+  document.getElementById('productModalTitle').textContent = p ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่';
+  document.getElementById('fName').value = p ? p.name : '';
+  document.getElementById('fCategory').value = p ? (p.category||'') : '';
+  document.getElementById('fUnit').value = p ? (p.unit||'') : '';
+  document.getElementById('fMin').value = p ? (p.min||'') : '';
+  document.getElementById('fPrice').value = p ? (p.price||'') : '';
+  document.getElementById('fStock').value = p ? p.stock : 0;
+  document.getElementById('stockFieldWrap').style.display = p ? 'none' : 'block';
+  document.getElementById('deleteProductBtn').style.display = p ? 'inline-flex' : 'none';
+  closeCalcPanel();
+
+  const preview = document.getElementById('imgPreview');
+  const placeholder = document.getElementById('imgPlaceholder');
+  if(p && p.image){ preview.src = p.image; preview.style.display='block'; placeholder.style.display='none'; }
+  else { preview.style.display='none'; placeholder.style.display='block'; }
+  document.getElementById('imgInput').value = '';
+  openOverlay('productOverlay');
+}
+document.getElementById('addProductBtn').addEventListener('click', ()=>openProductModal(null));
+document.getElementById('emptyAddBtn').addEventListener('click', ()=>openProductModal(null));
+
+document.getElementById('imgInput').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const maxDim = 480;
+      let w = img.width, h = img.height;
+      if(w > h && w > maxDim){ h = Math.round(h*maxDim/w); w = maxDim; }
+      else if(h > maxDim){ w = Math.round(w*maxDim/h); h = maxDim; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.68);
+      pendingImage = dataUrl;
+      const preview = document.getElementById('imgPreview');
+      preview.src = dataUrl; preview.style.display='block';
+      document.getElementById('imgPlaceholder').style.display='none';
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+// smart price calculator (total cost ÷ quantity received = price per unit)
+function closeCalcPanel(){
+  document.getElementById('calcPanel').classList.remove('show');
+  document.getElementById('calcQty').value = '';
+  document.getElementById('calcTotal').value = '';
+  document.getElementById('calcResult').textContent = 'กรอกทั้งสองช่องเพื่อคำนวณราคาต่อหน่วยอัตโนมัติ';
+}
+document.getElementById('calcToggleLink').addEventListener('click', ()=>{
+  const panel = document.getElementById('calcPanel');
+  const willShow = !panel.classList.contains('show');
+  panel.classList.toggle('show', willShow);
+  if(willShow){
+    document.getElementById('calcQty').value = document.getElementById('fStock').value || '';
+    updateCalcResult();
+  }
+});
+function updateCalcResult(){
+  const qty = safeEval(document.getElementById('calcQty').value);
+  const total = safeEval(document.getElementById('calcTotal').value);
+  const resultEl = document.getElementById('calcResult');
+  if(qty > 0 && total >= 0 && !isNaN(qty) && !isNaN(total)){
+    const perUnit = total / qty;
+    resultEl.innerHTML = `ราคาต่อหน่วย ≈ <b>${fmtMoney(perUnit)}</b> / ${escapeHtml(document.getElementById('fUnit').value.trim()||'หน่วย')}`;
+    document.getElementById('fPrice').value = perUnit.toFixed(2);
+  } else {
+    resultEl.textContent = 'กรอกทั้งสองช่องเพื่อคำนวณราคาต่อหน่วยอัตโนมัติ';
+  }
+}
+document.getElementById('calcQty').addEventListener('input', updateCalcResult);
+document.getElementById('calcTotal').addEventListener('input', updateCalcResult);
+
+document.getElementById('saveProductBtn').addEventListener('click', async ()=>{
+  if(!db){ showToast('ยังไม่ได้เชื่อมต่อฐานข้อมูล'); return; }
+  const name = document.getElementById('fName').value.trim();
+  if(!name){ showToast('กรุณากรอกชื่อสินค้า'); return; }
+  const category = document.getElementById('fCategory').value.trim();
+  const unit = document.getElementById('fUnit').value.trim() || 'ชิ้น';
+  const min = safeEval(document.getElementById('fMin').value) || 0;
+  const price = safeEval(document.getElementById('fPrice').value) || 0;
+
+  try{
+    if(editingProductId){
+      const updates = { name, category, unit, min, price };
+      if(pendingImage) updates.image = pendingImage;
+      await db.collection('products').doc(editingProductId).update(updates);
+      showToast('บันทึกการแก้ไขแล้ว');
+    } else {
+      const stock = safeEval(document.getElementById('fStock').value) || 0;
+      const newP = { id: uid(), name, category, unit, min, price, stock, image: pendingImage || null, createdAt: new Date().toISOString() };
+      await db.collection('products').doc(newP.id).set(newP);
+      if(stock > 0){
+        const t = { id: uid(), productId: newP.id, type:'in', qty: stock, note:'ยอดเริ่มต้น', date: new Date().toISOString(), balanceAfter: stock };
+        await db.collection('transactions').doc(t.id).set(t);
+      }
+      showToast('เพิ่มสินค้าแล้ว');
+    }
+    closeOverlay('productOverlay');
+  }catch(e){
+    showToast('บันทึกไม่สำเร็จ: ' + e.message);
+  }
+});
+
+document.getElementById('deleteProductBtn').addEventListener('click', ()=>{ if(editingProductId) askDeleteProduct(editingProductId); });
+
+function askDeleteProduct(id){
+  const p = state.products.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('confirmTitle').textContent = 'ลบสินค้า';
+  document.getElementById('confirmMsg').textContent = `ต้องการลบ "${p.name}" และประวัติรายการทั้งหมดของสินค้านี้หรือไม่?`;
+  confirmCallback = async ()=>{
+    try{
+      const batch = db.batch();
+      batch.delete(db.collection('products').doc(id));
+      const txSnap = await db.collection('transactions').where('productId','==',id).get();
+      txSnap.forEach(doc=>batch.delete(doc.ref));
+      await batch.commit();
+      closeOverlay('productOverlay'); closeOverlay('confirmOverlay'); closeDrawer();
+      showToast('ลบสินค้าแล้ว');
+    }catch(e){ showToast('ลบไม่สำเร็จ: ' + e.message); }
+  };
+  openOverlay('confirmOverlay');
+}
+document.getElementById('confirmActionBtn').addEventListener('click', ()=>{ if(confirmCallback) confirmCallback(); });
+
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  document.getElementById('confirmTitle').textContent = 'ล้างข้อมูลทั้งหมด';
+  document.getElementById('confirmMsg').textContent = 'จะลบสินค้าและประวัติรายการทั้งหมดอย่างถาวรจากฐานข้อมูล ไม่สามารถกู้คืนได้ ยืนยันหรือไม่?';
+  confirmCallback = async ()=>{
+    try{
+      const batch = db.batch();
+      const pSnap = await db.collection('products').get();
+      pSnap.forEach(doc=>batch.delete(doc.ref));
+      const tSnap = await db.collection('transactions').get();
+      tSnap.forEach(doc=>batch.delete(doc.ref));
+      await batch.commit();
+      closeOverlay('confirmOverlay');
+      showToast('ล้างข้อมูลแล้ว');
+    }catch(e){ showToast('ล้างข้อมูลไม่สำเร็จ: ' + e.message); }
+  };
+  openOverlay('confirmOverlay');
+});
+
+// ---------- stock modal ----------
+function openStockModal(id, type){
+  stockTargetId = id; stockType = type;
+  const p = state.products.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('stockModalTitle').textContent = p.name;
+  document.getElementById('sQty').value = '';
+  document.getElementById('sQtyHint').textContent = '';
+  document.getElementById('sNote').value = '';
+  setStockType(type);
+  updateStockPreview();
+  closeOverlay('paletteOverlay');
+  openOverlay('stockOverlay');
+  setTimeout(()=>document.getElementById('sQty').focus(), 50);
+}
+function setStockType(type){
+  stockType = type;
+  document.getElementById('typeInBtn').classList.toggle('active', type==='in');
+  document.getElementById('typeOutBtn').classList.toggle('active', type==='out');
+  updateStockPreview();
+}
+document.getElementById('typeInBtn').addEventListener('click', ()=>setStockType('in'));
+document.getElementById('typeOutBtn').addEventListener('click', ()=>setStockType('out'));
+document.getElementById('sQty').addEventListener('input', updateStockPreview);
+
+function updateStockPreview(){
+  const p = state.products.find(x=>x.id===stockTargetId);
+  if(!p) return;
+  const current = Number(p.stock||0);
+  const raw = document.getElementById('sQty').value;
+  const qty = safeEval(raw) || 0;
+  const hint = document.getElementById('sQtyHint');
+  hint.textContent = (/[+\-*/]/.test(raw) && !isNaN(qty) && qty>0) ? `= ${fmt(qty)} ${p.unit||'ชิ้น'}` : '';
+  const after = stockType==='in' ? current+qty : current-qty;
+  document.getElementById('sBefore').textContent = fmt(current);
+  const afterEl = document.getElementById('sAfter');
+  afterEl.textContent = fmt(after);
+  afterEl.style.color = after < 0 ? 'var(--rust)' : 'var(--ink)';
+}
+
+document.getElementById('saveStockBtn').addEventListener('click', async ()=>{
+  if(!db){ showToast('ยังไม่ได้เชื่อมต่อฐานข้อมูล'); return; }
+  const p = state.products.find(x=>x.id===stockTargetId);
+  if(!p) return;
+  const qty = safeEval(document.getElementById('sQty').value);
+  if(!qty || qty <= 0 || isNaN(qty)){ showToast('กรุณากรอกจำนวนให้ถูกต้อง'); return; }
+  const current = Number(p.stock||0);
+  if(stockType==='out' && qty > current){ showToast('จำนวนจ่ายออกมากกว่าคงเหลือในคลัง'); return; }
+  const note = document.getElementById('sNote').value.trim();
+  const newStock = Math.round((stockType==='in' ? current+qty : current-qty)*100)/100;
+  const t = { id: uid(), productId: p.id, type: stockType, qty, note, date: new Date().toISOString(), balanceAfter: newStock };
+  try{
+    const batch = db.batch();
+    batch.update(db.collection('products').doc(p.id), { stock: newStock });
+    batch.set(db.collection('transactions').doc(t.id), t);
+    await batch.commit();
+    closeOverlay('stockOverlay');
+    showToast(stockType==='in' ? `รับเข้า ${fmt(qty)} ${p.unit||'ชิ้น'} แล้ว` : `จ่ายออก ${fmt(qty)} ${p.unit||'ชิ้น'} แล้ว`);
+  }catch(e){
+    showToast('บันทึกไม่สำเร็จ: ' + e.message);
+  }
+});
+
+// ---------- history drawer ----------
+function openHistoryDrawer(id){
+  const p = state.products.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('drawerTitle').textContent = p.name;
+  document.getElementById('drawerStock').textContent = `คงเหลือ: ${fmt(p.stock)} ${p.unit||'ชิ้น'}`;
+  const img = document.getElementById('drawerImg'), ph = document.getElementById('drawerPh');
+  if(p.image){ img.src = p.image; img.style.display='block'; ph.style.display='none'; }
+  else { img.style.display='none'; ph.style.display='flex'; ph.textContent = (p.name||'?').slice(0,1).toUpperCase(); }
+
+  const items = state.transactions.filter(t=>t.productId===id).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const list = document.getElementById('ledgerList');
+  if(items.length===0){ list.innerHTML = '<div class="ledger-empty">ยังไม่มีประวัติรายการ</div>'; }
+  else {
+    list.innerHTML = items.map(t=>{
+      const d = new Date(t.date);
+      const dateStr = d.toLocaleDateString('th-TH',{day:'2-digit',month:'short',year:'2-digit'}) + ' · ' + d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+      const sign = t.type==='in' ? '+' : '−';
+      return `<div class="ledger-row">
+        <div class="ledger-left">
+          <div class="ledger-date">${dateStr}</div>
+          ${t.note ? `<div class="ledger-note">${escapeHtml(t.note)}</div>` : ''}
+        </div>
+        <div class="ledger-right">
+          <div class="ledger-qty ${t.type}">${sign}${fmt(t.qty)}</div>
+          <div class="ledger-bal">คงเหลือ ${fmt(t.balanceAfter)}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('drawerOverlay').classList.add('show');
+  document.getElementById('historyDrawer').classList.add('show');
+}
+function closeDrawer(){
+  document.getElementById('drawerOverlay').classList.remove('show');
+  document.getElementById('historyDrawer').classList.remove('show');
+}
+document.getElementById('drawerCloseBtn').addEventListener('click', closeDrawer);
+document.getElementById('drawerOverlay').addEventListener('click', closeDrawer);
+
+// ---------- smart search palette ----------
+function normalize(s){ return (s||'').toString().toLowerCase().trim(); }
+function fuzzyMatch(query, target){
+  if(!query) return true;
+  let qi = 0;
+  for(let i=0;i<target.length && qi<query.length;i++){
+    if(target[i] === query[qi]) qi++;
+  }
+  return qi === query.length;
+}
+function highlight(text, query){
+  if(!query) return escapeHtml(text);
+  const idx = normalize(text).indexOf(query);
+  if(idx === -1) return escapeHtml(text);
+  return escapeHtml(text.slice(0,idx)) + '<mark>' + escapeHtml(text.slice(idx, idx+query.length)) + '</mark>' + escapeHtml(text.slice(idx+query.length));
+}
+
+function openPalette(){
+  document.getElementById('paletteOverlay').classList.add('show');
+  const input = document.getElementById('paletteInput');
+  input.value = '';
+  renderPaletteResults('');
+  setTimeout(()=>input.focus(), 30);
+}
+function closePalette(){ document.getElementById('paletteOverlay').classList.remove('show'); }
+
+function renderPaletteResults(qRaw){
+  const q = normalize(qRaw);
+  let results;
+  if(!q){
+    results = [...state.products].sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)).slice(0,8);
+  } else {
+    const scored = state.products.map(p=>{
+      const name = normalize(p.name), cat = normalize(p.category);
+      let score = -1;
+      if(name.includes(q)) score = 100 - name.indexOf(q);
+      else if(cat.includes(q)) score = 60 - cat.indexOf(q);
+      else if(fuzzyMatch(q, name)) score = 20;
+      return {p, score};
+    }).filter(x=>x.score > -1).sort((a,b)=>b.score-a.score);
+    results = scored.map(x=>x.p).slice(0,10);
+  }
+  const wrap = document.getElementById('paletteResults');
+  document.getElementById('paletteCount').textContent = results.length + ' รายการ';
+  if(results.length===0){
+    wrap.innerHTML = `<div class="palette-empty">ไม่พบสินค้าที่ตรงกับ "${escapeHtml(qRaw)}"</div>`;
+    return;
+  }
+  wrap.innerHTML = results.map(p=>{
+    const imgHtml = p.image ? `<img src="${p.image}">` : `<div class="ph">${escapeHtml((p.name||'?').slice(0,1).toUpperCase())}</div>`;
+    return `<div class="palette-row">
+      ${imgHtml}
+      <div class="palette-info">
+        <div class="palette-name">${highlight(p.name, q)}</div>
+        <div class="palette-sub">คงเหลือ ${fmt(p.stock)} ${escapeHtml(p.unit||'ชิ้น')}${p.category ? ' · '+escapeHtml(p.category) : ''}</div>
+      </div>
+      <div class="palette-actions">
+        <button class="pin" title="รับเข้า" data-id="${p.id}" data-action="in">↧</button>
+        <button class="pout" title="จ่ายออก" data-id="${p.id}" data-action="out">↥</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+document.getElementById('paletteInput').addEventListener('input', (e)=> renderPaletteResults(e.target.value));
+document.getElementById('paletteResults').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-action]');
+  if(!btn) return;
+  openStockModal(btn.dataset.id, btn.dataset.action);
+});
+document.getElementById('quickSearchBtn').addEventListener('click', openPalette);
+document.getElementById('paletteOverlay').addEventListener('click', (e)=>{ if(e.target.id==='paletteOverlay') closePalette(); });
+document.addEventListener('keydown', (e)=>{
+  const tag = (document.activeElement && document.activeElement.tagName) || '';
+  const typing = tag === 'INPUT' || tag === 'TEXTAREA';
+  if(e.key === '/' && !typing){ e.preventDefault(); openPalette(); }
+  else if(e.key === 'Escape'){
+    if(document.getElementById('paletteOverlay').classList.contains('show')) closePalette();
+  }
+});
+
+// ---------- init ----------
+initApp();
+</script>
+</body>
+</html>
