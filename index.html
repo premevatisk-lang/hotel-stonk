@@ -79,15 +79,6 @@ body{background-color:var(--paper);color:var(--ink);font-family:'Noto Sans Thai'
 .stat-card.clickable.active{outline:2px solid var(--rust);}
 .stat-hint{font-size:10px;color:var(--ink-faint);font-weight:500;margin-top:1px;}
 
-/* ---------- activity strip ---------- */
-.activity{background:var(--surface);border:1px dashed var(--border);border-radius:8px;padding:10px 14px;margin-bottom:20px;display:flex;align-items:center;gap:14px;overflow-x:auto;}
-.activity-label{font-family:'IBM Plex Mono';font-size:11px;color:var(--ink-faint);flex-shrink:0;letter-spacing:.4px;text-transform:uppercase;border-right:1px dashed var(--border);padding-right:14px;}
-.activity-empty{font-size:12.5px;color:var(--ink-faint);font-style:italic;}
-.activity-item{flex-shrink:0;display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono';font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);white-space:nowrap;}
-.activity-item b{font-family:'Noto Sans Thai';font-weight:600;color:var(--ink);}
-.activity-item.in{color:var(--green);border-color:var(--green);background:var(--green-tint);}
-.activity-item.out{color:var(--rust);border-color:var(--rust);background:var(--rust-tint);}
-
 /* ---------- quick actions ---------- */
 .quick-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
 .qa-btn{display:flex;align-items:center;gap:10px;padding:14px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;text-align:left;font-family:'Noto Sans Thai';transition:transform .12s ease, box-shadow .12s ease;}
@@ -312,7 +303,6 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
     </div>
     <div class="header-actions">
       <button class="btn btn-amber" id="quickSearchBtn">🔍 ค้นหาด่วน <span style="opacity:.7;font-size:11px;">(/)</span></button>
-      <button class="btn btn-ghost btn-sm" id="importBtn">นำเข้าไฟล์ CSV</button>
       <button class="btn btn-primary" id="addProductBtn">+ เพิ่มสินค้า</button>
     </div>
   </div>
@@ -351,11 +341,6 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
       </div>
     </div>
 
-    <div class="activity" id="activityStrip">
-      <div class="activity-label">ล่าสุด</div>
-      <div class="activity-empty">ยังไม่มีความเคลื่อนไหว</div>
-    </div>
-
     <div class="quick-actions">
       <button class="qa-btn qa-in" id="bulkInBtn">
         <span class="qa-icon">📥</span>
@@ -383,6 +368,7 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
         <option value="">ทุกหมวดหมู่</option>
       </select>
       <button class="btn btn-ghost btn-sm" id="categoryMgrBtn" title="จัดการหมวดหมู่">⚙ หมวดหมู่</button>
+      <button class="btn btn-ghost btn-sm" id="printReorderBtn" title="พิมพ์รายการสินค้าใกล้หมด/หมด">🖨 พิมพ์รายการที่ต้องสั่งซื้อ</button>
     </div>
 
     <div id="filterStatusBar"></div>
@@ -575,32 +561,6 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
   </div>
 </div>
 
-<!-- CSV Import Modal -->
-<div class="overlay" id="importOverlay">
-  <div class="modal" style="max-width:560px;">
-    <div class="modal-head">
-      <h3>นำเข้าสินค้าจากไฟล์ CSV</h3>
-      <button class="modal-close" data-close="importOverlay">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="field">
-        <label>เลือกไฟล์ CSV</label>
-        <input type="file" accept=".csv" id="importFileInput">
-        <div class="hint">แถวแรกควรเป็นหัวคอลัมน์: ชื่อสินค้า, หมวดหมู่, หน่วยนับ, จำนวนเริ่มต้น, ราคาต่อหน่วย, แจ้งเตือนเมื่อคงเหลือต่ำกว่า (มีแค่ "ชื่อสินค้า" ก็นำเข้าได้ ที่เหลือใส่ภายหลังได้)</div>
-      </div>
-      <div id="importPreviewWrap" style="display:none;">
-        <div class="calc-result" id="importSummary"></div>
-        <div id="importPreviewList" style="max-height:280px;overflow-y:auto;margin-top:8px;"></div>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" data-close="importOverlay">ยกเลิก</button>
-      <button class="btn btn-primary" id="importConfirmBtn" style="display:none;">นำเข้าทั้งหมด</button>
-    </div>
-  </div>
-</div>
-
-<!-- CSV Import Modal end -->
 <!-- Bulk Stock In/Out Modal (multiple products at once) -->
 <div class="overlay" id="bulkOverlay">
   <div class="modal" style="max-width:560px;">
@@ -825,7 +785,7 @@ function initApp(){
 
 // ---------- render ----------
 function renderAll(){
-  renderStats(); renderActivity(); renderCategoryOptions(); renderGrid();
+  renderStats(); renderCategoryOptions(); renderGrid();
   if(currentDrawerProductId && document.getElementById('historyDrawer').classList.contains('show')){
     openHistoryDrawer(currentDrawerProductId);
   }
@@ -845,21 +805,6 @@ function renderStats(){
   document.getElementById('statOut').innerHTML = outCount + '<span>รายการ</span>';
   const lowCount = state.products.filter(p=> Number(p.min||0) > 0 && Number(p.stock||0) > 0 && Number(p.stock||0) <= Number(p.min||0)).length;
   document.getElementById('statLow').innerHTML = lowCount + '<span>รายการ</span>';
-}
-
-function renderActivity(){
-  const wrap = document.getElementById('activityStrip');
-  const recent = [...state.transactions].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,10);
-  if(recent.length === 0){
-    wrap.innerHTML = '<div class="activity-label">ล่าสุด</div><div class="activity-empty">ยังไม่มีความเคลื่อนไหว</div>';
-    return;
-  }
-  wrap.innerHTML = '<div class="activity-label">ล่าสุด</div>' + recent.map(t=>{
-    const p = state.products.find(pr=>pr.id===t.productId);
-    const name = p ? p.name : 'สินค้าที่ถูกลบ';
-    const sign = t.type==='in' ? '+' : '−';
-    return `<div class="activity-item ${t.type}"><b>${escapeHtml(name)}</b> ${sign}${fmt(t.qty)}</div>`;
-  }).join('');
 }
 
 function renderCategoryOptions(){
@@ -897,6 +842,51 @@ function renderCategoryMgr(){
   }).join('');
 }
 document.getElementById('categoryMgrBtn').addEventListener('click', openCategoryMgr);
+
+// ---------- print reorder list (out-of-stock + near-low, clearly separated) ----------
+function printReorderList(){
+  const outItems = state.products.filter(p=>Number(p.stock||0) <= 0).sort((a,b)=>a.name.localeCompare(b.name,'th'));
+  const lowItems = state.products.filter(p=> Number(p.min||0) > 0 && Number(p.stock||0) > 0 && Number(p.stock||0) <= Number(p.min||0)).sort((a,b)=>a.name.localeCompare(b.name,'th'));
+  if(outItems.length===0 && lowItems.length===0){ showToast('ไม่มีสินค้าใกล้หมดหรือหมดในตอนนี้'); return; }
+
+  const rowsHtml = (items)=> items.map(p=>`<tr>
+    <td>${escapeHtml(p.name)}</td>
+    <td>${escapeHtml(p.category || '-')}</td>
+    <td style="text-align:right;">${fmt(p.stock)} ${escapeHtml(p.unit||'ชิ้น')}</td>
+    <td style="text-align:right;">${p.min ? fmt(p.min)+' '+escapeHtml(p.unit||'ชิ้น') : '-'}</td>
+  </tr>`).join('');
+
+  const section = (title, cls, items)=> `
+    <h2 class="${cls}">${title} (${items.length} รายการ)</h2>
+    ${items.length
+      ? `<table><thead><tr><th>สินค้า</th><th>หมวดหมู่</th><th>คงเหลือ</th><th>เกณฑ์แจ้งเตือน</th></tr></thead><tbody>${rowsHtml(items)}</tbody></table>`
+      : '<div class="empty-note">ไม่มีรายการในหมวดนี้</div>'}`;
+
+  const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>รายการสินค้าที่ต้องสั่งซื้อ</title>
+  <style>
+    body{font-family:'Noto Sans Thai',sans-serif;padding:24px;color:#202B22;}
+    h1{font-size:20px;margin-bottom:4px;}
+    h2{font-size:15px;margin:22px 0 8px;padding:7px 12px;border-radius:6px;}
+    h2.out{background:#F5E6E1;color:#B5442E;}
+    h2.low{background:#FBEED9;color:#C98A2C;}
+    .meta{color:#5C6B5E;font-size:13px;margin-bottom:4px;}
+    table{width:100%;border-collapse:collapse;font-size:13px;}
+    th,td{border:1px solid #D7DCC7;padding:6px 8px;text-align:left;}
+    th{background:#EEF0E7;}
+    .empty-note{color:#93A092;font-size:13px;padding:4px 0;}
+  </style></head><body>
+  <h1>รายการสินค้าที่ต้องสั่งซื้อ</h1>
+  <div class="meta">พิมพ์เมื่อ ${new Date().toLocaleString('th-TH')}</div>
+  ${section('🔻 สินค้าหมด', 'out', outItems)}
+  ${section('🟡 สินค้าใกล้หมด', 'low', lowItems)}
+  <script>window.onload = () => window.print();<\/script>
+  </body></html>`;
+  const w = window.open('', '_blank');
+  if(!w){ showToast('เบราว์เซอร์บล็อกป็อปอัป กรุณาอนุญาตแล้วลองใหม่'); return; }
+  w.document.write(html);
+  w.document.close();
+}
+document.getElementById('printReorderBtn').addEventListener('click', printReorderList);
 document.getElementById('categoryMgrList').addEventListener('click', async (e)=>{
   const row = e.target.closest('.cat-mgr-row');
   if(!row) return;
@@ -1164,129 +1154,6 @@ function askDeleteProduct(id){
   openOverlay('confirmOverlay');
 }
 document.getElementById('confirmActionBtn').addEventListener('click', ()=>{ if(confirmCallback) confirmCallback(); });
-
-// ---------- import products from CSV ----------
-function parseCSV(text){
-  const rows = [];
-  let row = [], field = '', inQuotes = false;
-  for(let i=0;i<text.length;i++){
-    const c = text[i];
-    if(inQuotes){
-      if(c === '"'){
-        if(text[i+1] === '"'){ field += '"'; i++; }
-        else inQuotes = false;
-      } else field += c;
-    } else {
-      if(c === '"') inQuotes = true;
-      else if(c === ','){ row.push(field); field = ''; }
-      else if(c === '\n' || c === '\r'){
-        if(c === '\r' && text[i+1] === '\n') i++;
-        row.push(field); field = '';
-        if(row.length > 1 || row[0] !== '') rows.push(row);
-        row = [];
-      } else field += c;
-    }
-  }
-  if(field !== '' || row.length){ row.push(field); rows.push(row); }
-  return rows;
-}
-const CSV_HEADER_MAP = {
-  'ชื่อสินค้า':'name', 'name':'name',
-  'หมวดหมู่':'category', 'category':'category',
-  'หน่วยนับ':'unit', 'หน่วย':'unit', 'unit':'unit',
-  'จำนวนเริ่มต้น':'stock', 'จำนวน':'stock', 'stock':'stock',
-  'ราคาต่อหน่วย':'price', 'ราคา':'price', 'price':'price',
-  'แจ้งเตือนเมื่อคงเหลือต่ำกว่า':'min', 'min':'min'
-};
-let importRows = [];
-
-document.getElementById('importBtn').addEventListener('click', ()=>{
-  importRows = [];
-  document.getElementById('importFileInput').value = '';
-  document.getElementById('importPreviewWrap').style.display = 'none';
-  document.getElementById('importConfirmBtn').style.display = 'none';
-  openOverlay('importOverlay');
-});
-
-document.getElementById('importFileInput').addEventListener('change', (e)=>{
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev)=>{
-    const rows = parseCSV(ev.target.result).filter(r=>r.some(c=>c.trim()!==''));
-    if(rows.length===0){ showToast('ไม่พบข้อมูลในไฟล์'); return; }
-    let colMap = {};
-    let hasHeader = false;
-    rows[0].forEach((h, idx)=>{
-      const key = CSV_HEADER_MAP[h.trim().toLowerCase()];
-      if(key){ colMap[key] = idx; hasHeader = true; }
-    });
-    const dataRows = hasHeader ? rows.slice(1) : rows;
-    if(!hasHeader) colMap = { name:0, category:1, unit:2, stock:3, price:4, min:5 };
-
-    importRows = dataRows.map(r=>{
-      const name = (r[colMap.name] || '').trim();
-      return {
-        name,
-        category: (r[colMap.category] || '').trim(),
-        unit: (r[colMap.unit] || '').trim() || 'ชิ้น',
-        stock: safeEval(r[colMap.stock]) || 0,
-        price: safeEval(r[colMap.price]) || 0,
-        min: safeEval(r[colMap.min]) || 0,
-        valid: !!name
-      };
-    });
-    renderImportPreview();
-  };
-  reader.readAsText(file, 'utf-8');
-});
-
-function renderImportPreview(){
-  const wrap = document.getElementById('importPreviewWrap');
-  const list = document.getElementById('importPreviewList');
-  const validCount = importRows.filter(r=>r.valid).length;
-  const invalidCount = importRows.length - validCount;
-  document.getElementById('importSummary').innerHTML = `พบ ${importRows.length} แถว · นำเข้าได้ <b>${validCount}</b> รายการ${invalidCount>0 ? ` · ข้าม ${invalidCount} แถว (ไม่มีชื่อสินค้า)` : ''}`;
-  list.innerHTML = importRows.map(r=>`
-    <div class="bulk-row" style="${r.valid ? '' : 'opacity:.5;'}">
-      <div class="bulk-name">
-        <div class="n">${escapeHtml(r.name || '(ไม่มีชื่อ - จะข้าม)')}</div>
-        <div class="s">${r.category ? escapeHtml(r.category)+' · ' : ''}${fmt(r.stock)} ${escapeHtml(r.unit)}${r.price ? ' · ฿'+fmt(r.price) : ''}</div>
-      </div>
-    </div>
-  `).join('');
-  wrap.style.display = 'block';
-  document.getElementById('importConfirmBtn').style.display = validCount>0 ? 'inline-flex' : 'none';
-}
-
-document.getElementById('importConfirmBtn').addEventListener('click', async ()=>{
-  if(!db){ showToast('ยังไม่ได้เชื่อมต่อฐานข้อมูล'); return; }
-  const valid = importRows.filter(r=>r.valid);
-  if(valid.length===0) return;
-  try{
-    const now = new Date().toISOString();
-    const chunkSize = 200;
-    for(let i=0;i<valid.length;i+=chunkSize){
-      const chunk = valid.slice(i, i+chunkSize);
-      const batch = db.batch();
-      chunk.forEach(r=>{
-        const newP = { id: uid(), name:r.name, category:r.category, unit:r.unit||'ชิ้น', min:r.min||0, price:r.price||0, stock:r.stock||0, image:null, createdAt: now };
-        batch.set(db.collection('products').doc(newP.id), newP);
-        if(newP.stock > 0){
-          const t = { id: uid(), productId:newP.id, type:'in', qty:newP.stock, note:'นำเข้าจากไฟล์', date: now, balanceAfter:newP.stock };
-          batch.set(db.collection('transactions').doc(t.id), t);
-        }
-      });
-      await batch.commit();
-    }
-    closeOverlay('importOverlay');
-    showToast(`นำเข้าสินค้า ${valid.length} รายการแล้ว`);
-    importRows = [];
-    document.getElementById('importFileInput').value = '';
-    document.getElementById('importPreviewWrap').style.display = 'none';
-    document.getElementById('importConfirmBtn').style.display = 'none';
-  }catch(e){ showToast('นำเข้าไม่สำเร็จ: ' + e.message); }
-});
 
 // ---------- stock modal ----------
 function openStockModal(id, type){
