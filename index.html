@@ -217,6 +217,16 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
 .cat-mgr-clear{border-color:var(--rust);color:var(--rust);}
 .cat-mgr-clear:hover{background:var(--rust);color:#fff;}
 
+/* ---------- product movement chart ---------- */
+.chart-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dotted var(--border);}
+.chart-row:last-child{border-bottom:none;}
+.chart-rank{width:22px;height:22px;border-radius:50%;background:var(--paper-deep);color:var(--ink-soft);font-family:'IBM Plex Mono';font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.chart-info{flex:1;min-width:0;}
+.chart-name{font-family:'Kanit';font-weight:600;font-size:13px;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.chart-bar-wrap{background:var(--paper);border-radius:4px;height:10px;overflow:hidden;}
+.chart-bar{height:100%;background:linear-gradient(90deg,var(--green),var(--amber));border-radius:4px;transition:width .3s ease;}
+.chart-val{font-family:'IBM Plex Mono';font-size:12px;color:var(--ink-soft);white-space:nowrap;flex-shrink:0;min-width:64px;text-align:right;}
+
 /* ---------- history drawer ---------- */
 .hist-day{border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;}
 .hist-day-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 14px;background:var(--paper);cursor:pointer;font-family:'Kanit';font-weight:600;font-size:13.5px;}
@@ -369,6 +379,8 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
       </select>
       <button class="btn btn-ghost btn-sm" id="categoryMgrBtn" title="จัดการหมวดหมู่">⚙ หมวดหมู่</button>
       <button class="btn btn-ghost btn-sm" id="printReorderBtn" title="พิมพ์รายการสินค้าใกล้หมด/หมด">🖨 พิมพ์รายการที่ต้องสั่งซื้อ</button>
+      <button class="btn btn-ghost btn-sm" id="copyReorderBtn" title="คัดลอกข้อความเพื่อส่งไลน์">📋 คัดลอกข้อความ</button>
+      <button class="btn btn-ghost btn-sm" id="chartBtn" title="กราฟสรุปการเคลื่อนไหวสินค้า">📊 กราฟสรุป</button>
     </div>
 
     <div id="filterStatusBar"></div>
@@ -561,6 +573,44 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
   </div>
 </div>
 
+<!-- Product Movement Chart Modal -->
+<div class="overlay" id="chartOverlay">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-head">
+      <h3>กราฟสรุปการเคลื่อนไหวสินค้า</h3>
+      <button class="modal-close" data-close="chartOverlay">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="type-toggle" style="max-width:360px;">
+        <button type="button" id="chartTypeAllBtn" class="in active">รวม (รับเข้า+จ่ายออก)</button>
+        <button type="button" id="chartTypeOutBtn" class="out">เฉพาะจ่ายออก</button>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>ช่วงเวลา</label>
+          <select id="chartRangeSelect">
+            <option value="30">เดือนล่าสุด</option>
+            <option value="90">3 เดือนล่าสุด</option>
+            <option value="custom">กำหนดเอง</option>
+          </select>
+        </div>
+        <div class="field" id="chartCustomFromWrap" style="display:none;">
+          <label>ตั้งแต่วันที่</label>
+          <input type="date" id="chartFrom">
+        </div>
+        <div class="field" id="chartCustomToWrap" style="display:none;">
+          <label>ถึงวันที่</label>
+          <input type="date" id="chartTo">
+        </div>
+      </div>
+      <div id="chartWrap" style="margin-top:10px;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close="chartOverlay">ปิด</button>
+    </div>
+  </div>
+</div>
+
 <!-- Bulk Stock In/Out Modal (multiple products at once) -->
 <div class="overlay" id="bulkOverlay">
   <div class="modal" style="max-width:560px;">
@@ -683,6 +733,7 @@ let bulkSelectedCategory = '';
 let globalHistType = 'in';
 let globalHistOpenDates = new Set();
 let stockFilter = ''; // '', 'out', 'low'
+let chartMode = 'all'; // 'all' or 'out'
 let lastBulkCategory = '';
 
 // ---------- helpers ----------
@@ -795,6 +846,9 @@ function renderAll(){
   if(document.getElementById('categoryMgrOverlay') && document.getElementById('categoryMgrOverlay').classList.contains('show')){
     renderCategoryMgr();
   }
+  if(document.getElementById('chartOverlay') && document.getElementById('chartOverlay').classList.contains('show')){
+    renderProductChart();
+  }
 }
 
 function renderStats(){
@@ -843,10 +897,15 @@ function renderCategoryMgr(){
 }
 document.getElementById('categoryMgrBtn').addEventListener('click', openCategoryMgr);
 
-// ---------- print reorder list (out-of-stock + near-low, clearly separated) ----------
-function printReorderList(){
+// ---------- reorder list: shared data + print + copy-as-text ----------
+function getReorderItems(){
   const outItems = state.products.filter(p=>Number(p.stock||0) <= 0).sort((a,b)=>a.name.localeCompare(b.name,'th'));
   const lowItems = state.products.filter(p=> Number(p.min||0) > 0 && Number(p.stock||0) > 0 && Number(p.stock||0) <= Number(p.min||0)).sort((a,b)=>a.name.localeCompare(b.name,'th'));
+  return { outItems, lowItems };
+}
+
+function printReorderList(){
+  const { outItems, lowItems } = getReorderItems();
   if(outItems.length===0 && lowItems.length===0){ showToast('ไม่มีสินค้าใกล้หมดหรือหมดในตอนนี้'); return; }
 
   const rowsHtml = (items)=> items.map(p=>`<tr>
@@ -887,6 +946,123 @@ function printReorderList(){
   w.document.close();
 }
 document.getElementById('printReorderBtn').addEventListener('click', printReorderList);
+
+function buildReorderText(){
+  const { outItems, lowItems } = getReorderItems();
+  if(outItems.length===0 && lowItems.length===0) return null;
+  const lineFor = (p)=> `${p.name} — คงเหลือ ${fmt(p.stock)} ${p.unit||'ชิ้น'}${p.category ? ' ('+p.category+')' : ''}`;
+  const lines = [];
+  lines.push('📦 รายการสินค้าที่ต้องสั่งซื้อ');
+  lines.push(new Date().toLocaleDateString('th-TH', {day:'numeric', month:'short', year:'numeric'}));
+  lines.push('');
+  lines.push(`🔻 สินค้าหมด (${outItems.length} รายการ)`);
+  lines.push(...(outItems.length ? outItems.map((p,i)=>`${i+1}. ${lineFor(p)}`) : ['- ไม่มี -']));
+  lines.push('');
+  lines.push(`🟡 สินค้าใกล้หมด (${lowItems.length} รายการ)`);
+  lines.push(...(lowItems.length ? lowItems.map((p,i)=>`${i+1}. ${lineFor(p)}`) : ['- ไม่มี -']));
+  return lines.join('\n');
+}
+
+async function copyReorderText(){
+  const text = buildReorderText();
+  if(text === null){ showToast('ไม่มีสินค้าใกล้หมดหรือหมดในตอนนี้'); return; }
+  try{
+    await navigator.clipboard.writeText(text);
+    showToast('คัดลอกข้อความแล้ว วางส่งไลน์ได้เลย');
+  }catch(e){
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('คัดลอกข้อความแล้ว วางส่งไลน์ได้เลย');
+    }catch(e2){
+      showToast('คัดลอกไม่สำเร็จ กรุณาลองคัดลอกด้วยตัวเอง');
+    }
+  }
+}
+document.getElementById('copyReorderBtn').addEventListener('click', copyReorderText);
+
+// ---------- product movement chart ----------
+function openChartModal(){
+  chartMode = 'all';
+  document.getElementById('chartTypeAllBtn').classList.add('active');
+  document.getElementById('chartTypeOutBtn').classList.remove('active');
+  document.getElementById('chartRangeSelect').value = '30';
+  document.getElementById('chartCustomFromWrap').style.display = 'none';
+  document.getElementById('chartCustomToWrap').style.display = 'none';
+  renderProductChart();
+  openOverlay('chartOverlay');
+}
+document.getElementById('chartBtn').addEventListener('click', openChartModal);
+document.getElementById('chartTypeAllBtn').addEventListener('click', ()=>{
+  chartMode = 'all';
+  document.getElementById('chartTypeAllBtn').classList.add('active');
+  document.getElementById('chartTypeOutBtn').classList.remove('active');
+  renderProductChart();
+});
+document.getElementById('chartTypeOutBtn').addEventListener('click', ()=>{
+  chartMode = 'out';
+  document.getElementById('chartTypeOutBtn').classList.add('active');
+  document.getElementById('chartTypeAllBtn').classList.remove('active');
+  renderProductChart();
+});
+document.getElementById('chartRangeSelect').addEventListener('change', (e)=>{
+  const isCustom = e.target.value === 'custom';
+  document.getElementById('chartCustomFromWrap').style.display = isCustom ? 'block' : 'none';
+  document.getElementById('chartCustomToWrap').style.display = isCustom ? 'block' : 'none';
+  renderProductChart();
+});
+document.getElementById('chartFrom').addEventListener('change', renderProductChart);
+document.getElementById('chartTo').addEventListener('change', renderProductChart);
+
+function renderProductChart(){
+  const rangeSel = document.getElementById('chartRangeSelect').value;
+  const now = new Date();
+  let fromDate = null, toDate = null;
+  if(rangeSel === '30'){ fromDate = new Date(now.getTime() - 30*86400000); toDate = now; }
+  else if(rangeSel === '90'){ fromDate = new Date(now.getTime() - 90*86400000); toDate = now; }
+  else {
+    const f = document.getElementById('chartFrom').value;
+    const t = document.getElementById('chartTo').value;
+    fromDate = f ? new Date(f+'T00:00:00') : null;
+    toDate = t ? new Date(t+'T23:59:59') : null;
+  }
+
+  const items = state.transactions.filter(t=>{
+    if(chartMode === 'out' && t.type !== 'out') return false;
+    const d = new Date(t.date);
+    if(fromDate && d < fromDate) return false;
+    if(toDate && d > toDate) return false;
+    return true;
+  });
+
+  const totals = {};
+  items.forEach(t=>{ totals[t.productId] = (totals[t.productId]||0) + Number(t.qty||0); });
+  const ranked = Object.entries(totals).map(([productId, qty])=>{
+    const p = state.products.find(x=>x.id===productId);
+    return { name: p ? p.name : 'สินค้าที่ถูกลบ', unit: p ? (p.unit||'ชิ้น') : '', qty };
+  }).sort((a,b)=>b.qty-a.qty).slice(0,10);
+
+  const wrap = document.getElementById('chartWrap');
+  if(ranked.length===0){ wrap.innerHTML = '<div class="ledger-empty">ไม่มีข้อมูลการเคลื่อนไหวในช่วงเวลานี้</div>'; return; }
+  const maxQty = ranked[0].qty || 1;
+  wrap.innerHTML = ranked.map((r,i)=>{
+    const pct = Math.max(4, Math.round((r.qty/maxQty)*100));
+    return `<div class="chart-row">
+      <div class="chart-rank">${i+1}</div>
+      <div class="chart-info">
+        <div class="chart-name">${escapeHtml(r.name)}</div>
+        <div class="chart-bar-wrap"><div class="chart-bar" style="width:${pct}%;"></div></div>
+      </div>
+      <div class="chart-val">${fmt(r.qty)} ${escapeHtml(r.unit)}</div>
+    </div>`;
+  }).join('');
+}
 document.getElementById('categoryMgrList').addEventListener('click', async (e)=>{
   const row = e.target.closest('.cat-mgr-row');
   if(!row) return;
