@@ -65,7 +65,7 @@ body{background-color:var(--paper);color:var(--ink);font-family:'Noto Sans Thai'
 .setup-banner a{color:var(--amber);}
 
 /* ---------- stats ---------- */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;}
 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;position:relative;overflow:hidden;}
 .stat-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--amber);}
 .stat-card.green::before{background:var(--green);}
@@ -83,6 +83,19 @@ body{background-color:var(--paper);color:var(--ink);font-family:'Noto Sans Thai'
 .activity-item b{font-family:'Noto Sans Thai';font-weight:600;color:var(--ink);}
 .activity-item.in{color:var(--green);border-color:var(--green);background:var(--green-tint);}
 .activity-item.out{color:var(--rust);border-color:var(--rust);background:var(--rust-tint);}
+
+/* ---------- quick actions ---------- */
+.quick-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.qa-btn{display:flex;align-items:center;gap:10px;padding:14px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;text-align:left;font-family:'Noto Sans Thai';transition:transform .12s ease, box-shadow .12s ease;}
+.qa-btn:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
+.qa-icon{font-size:22px;flex-shrink:0;line-height:1;}
+.qa-text{font-weight:700;font-size:13.5px;color:var(--ink);line-height:1.4;}
+.qa-text small{display:block;font-weight:500;color:var(--ink-soft);font-size:11px;margin-top:1px;}
+.qa-in{border-color:var(--green);background:var(--green-tint);}
+.qa-out{border-color:var(--rust);background:var(--rust-tint);}
+.qa-hist-in{border-color:#3D5A80;background:#E7EDF3;}
+.qa-hist-out{border-color:var(--amber);background:var(--amber-tint);}
+@media (max-width:700px){ .quick-actions{grid-template-columns:repeat(2,1fr);} }
 
 /* ---------- controls ---------- */
 .controls{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
@@ -104,6 +117,10 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
 .stamp.normal{color:var(--green);}
 .stamp.low{color:var(--amber);}
 .stamp.out{color:var(--rust);background:rgba(255,255,255,.92);}
+.card.is-out{border-color:var(--rust);box-shadow:0 0 0 2px rgba(181,68,46,0.18);}
+.card.is-out .card-img-wrap img,.card.is-out .card-img-placeholder{filter:grayscale(55%);opacity:.75;}
+.card.is-out .stock-num{color:var(--rust);}
+.out-ribbon{position:absolute;left:-32%;right:-32%;top:40%;background:var(--rust);color:#fff;text-align:center;padding:7px 0;font-family:'Kanit';font-weight:700;font-size:16px;letter-spacing:1.5px;transform:rotate(-11deg);box-shadow:0 3px 10px rgba(0,0,0,0.28);}
 .card-body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px;flex:1;}
 .card-title{font-family:'Kanit';font-weight:600;font-size:15.5px;line-height:1.25;}
 .card-meta{display:flex;gap:6px;flex-wrap:wrap;font-family:'IBM Plex Mono';font-size:10.5px;color:var(--ink-soft);}
@@ -166,6 +183,25 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
 .type-toggle button{flex:1;padding:10px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface);font-family:'Noto Sans Thai';font-weight:600;font-size:13.5px;cursor:pointer;color:var(--ink-soft);}
 .type-toggle button.active.in{border-color:var(--green);background:var(--green-tint);color:var(--green);}
 .type-toggle button.active.out{border-color:var(--rust);background:var(--rust-tint);color:var(--rust);}
+
+/* ---------- bulk stock modal ---------- */
+.bulk-search-results{margin-top:6px;max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;display:none;}
+.bulk-search-results.show{display:block;}
+.bulk-search-row{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;border-bottom:1px dotted var(--border);font-size:13px;}
+.bulk-search-row:last-child{border-bottom:none;}
+.bulk-search-row:hover{background:var(--paper);}
+.bulk-search-row .n{font-weight:600;flex:1;}
+.bulk-search-row .s{font-family:'IBM Plex Mono';font-size:11px;color:var(--ink-soft);}
+.bulk-cart-empty{text-align:center;color:var(--ink-faint);font-size:13px;padding:22px 10px;border:1.5px dashed var(--border);border-radius:8px;}
+.bulk-row{display:flex;align-items:flex-start;gap:8px;padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:var(--paper);}
+.bulk-row .bulk-name{flex:1;min-width:0;}
+.bulk-row .bulk-name .n{font-family:'Kanit';font-weight:600;font-size:13.5px;}
+.bulk-row .bulk-name .s{font-family:'IBM Plex Mono';font-size:11px;color:var(--ink-soft);margin-top:2px;}
+.bulk-row .bulk-fields{display:flex;gap:6px;flex-shrink:0;}
+.bulk-row .bulk-fields input{width:74px;padding:7px 8px;border:1.5px solid var(--border);border-radius:5px;font-family:'IBM Plex Mono';font-size:12.5px;background:var(--surface);}
+.bulk-row .bulk-fields label{display:block;font-size:9.5px;color:var(--ink-faint);margin-bottom:2px;font-family:'IBM Plex Mono';text-transform:uppercase;}
+.bulk-row .bulk-remove{background:none;border:none;color:var(--rust);font-size:18px;cursor:pointer;padding:2px 4px;flex-shrink:0;}
+.bulk-warn{color:var(--rust);font-size:11px;margin-top:4px;font-family:'IBM Plex Mono';}
 
 /* ---------- history drawer ---------- */
 .drawer-overlay{position:fixed;inset:0;background:rgba(32,43,34,0.4);display:none;z-index:60;}
@@ -267,10 +303,6 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
         <div class="stat-label">คงคลังรวม</div>
         <div class="stat-value" id="statStock">0<span>หน่วย</span></div>
       </div>
-      <div class="stat-card blue">
-        <div class="stat-label">มูลค่าคงคลัง</div>
-        <div class="stat-value" id="statValue">฿0</div>
-      </div>
       <div class="stat-card rust">
         <div class="stat-label">รายการวันนี้</div>
         <div class="stat-value" id="statToday">0<span>ครั้ง</span></div>
@@ -282,9 +314,28 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
       <div class="activity-empty">ยังไม่มีความเคลื่อนไหว</div>
     </div>
 
+    <div class="quick-actions">
+      <button class="qa-btn qa-in" id="bulkInBtn">
+        <span class="qa-icon">📥</span>
+        <span class="qa-text">รับสินค้าเข้า<small>รับได้หลายรายการ พร้อมราคา</small></span>
+      </button>
+      <button class="qa-btn qa-out" id="bulkOutBtn">
+        <span class="qa-icon">📤</span>
+        <span class="qa-text">จ่ายสินค้าออก (เบิก)<small>เบิกได้หลายรายการในครั้งเดียว</small></span>
+      </button>
+      <button class="qa-btn qa-hist-in" id="histInBtn">
+        <span class="qa-icon">📜</span>
+        <span class="qa-text">ประวัติรับเข้า<small>ดูรายการรับเข้าทั้งหมด</small></span>
+      </button>
+      <button class="qa-btn qa-hist-out" id="histOutBtn">
+        <span class="qa-icon">🧾</span>
+        <span class="qa-text">ประวัติจ่ายออก<small>ดูรายการจ่ายออกทั้งหมด</small></span>
+      </button>
+    </div>
+
     <div class="controls">
       <div class="search-box">
-        <input type="text" id="searchInput" placeholder="กรองสินค้าในหน้านี้...">
+        <input type="text" id="searchInput" placeholder="ค้นหาชื่อสินค้า หรือหมวดหมู่...">
       </div>
       <select class="cat-filter" id="catFilter">
         <option value="">ทุกหมวดหมู่</option>
@@ -429,6 +480,55 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
   </div>
 </div>
 
+<!-- Bulk Stock In/Out Modal (multiple products at once) -->
+<div class="overlay" id="bulkOverlay">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-head">
+      <h3 id="bulkModalTitle">รับสินค้าเข้าหลายรายการ</h3>
+      <button class="modal-close" data-close="bulkOverlay">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>ค้นหาสินค้าเพื่อเพิ่มลงรายการ</label>
+        <input type="text" id="bulkSearchInput" placeholder="พิมพ์ชื่อสินค้าหรือหมวดหมู่...">
+        <div id="bulkSearchResults" class="bulk-search-results"></div>
+      </div>
+      <div class="field">
+        <label>หมายเหตุ (ใช้กับทุกรายการ ไม่บังคับ)</label>
+        <input type="text" id="bulkNote" placeholder="เช่น รับจากซัพพลายเออร์ ABC / เบิกให้ทีมขาย">
+      </div>
+      <div id="bulkCartWrap">
+        <div class="bulk-cart-empty" id="bulkCartEmpty">ยังไม่มีสินค้าในรายการ ค้นหาด้านบนเพื่อเพิ่ม</div>
+        <div id="bulkCartList"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close="bulkOverlay">ยกเลิก</button>
+      <button class="btn btn-primary" id="saveBulkBtn">บันทึกทั้งหมด</button>
+    </div>
+  </div>
+</div>
+
+<!-- Global History Modal (all "in" or all "out" transactions across products) -->
+<div class="overlay" id="globalHistOverlay">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-head">
+      <h3 id="globalHistTitle">ประวัติรับเข้าทั้งหมด</h3>
+      <button class="modal-close" data-close="globalHistOverlay">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <input type="text" id="globalHistSearch" placeholder="ค้นหาชื่อสินค้าในประวัติ...">
+      </div>
+      <div class="calc-result" id="globalHistSummary"></div>
+      <div id="globalHistList" style="max-height:50vh;overflow-y:auto;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close="globalHistOverlay">ปิด</button>
+    </div>
+  </div>
+</div>
+
 <!-- History Drawer -->
 <div class="drawer-overlay" id="drawerOverlay"></div>
 <div class="drawer" id="historyDrawer">
@@ -483,6 +583,9 @@ let stockTargetId = null;
 let stockType = 'in';
 let confirmCallback = null;
 let pendingImage = null;
+let bulkType = 'in';
+let bulkCart = [];
+let globalHistType = 'in';
 
 // ---------- helpers ----------
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
@@ -555,14 +658,17 @@ function initApp(){
 }
 
 // ---------- render ----------
-function renderAll(){ renderStats(); renderActivity(); renderCategoryOptions(); renderGrid(); }
+function renderAll(){
+  renderStats(); renderActivity(); renderCategoryOptions(); renderGrid();
+  if(document.getElementById('globalHistOverlay').classList.contains('show')){
+    renderGlobalHistory(document.getElementById('globalHistSearch').value);
+  }
+}
 
 function renderStats(){
   document.getElementById('statCount').innerHTML = state.products.length + '<span>รายการ</span>';
   const totalStock = state.products.reduce((s,p)=>s+Number(p.stock||0),0);
   document.getElementById('statStock').innerHTML = fmt(totalStock) + '<span>หน่วย</span>';
-  const totalValue = state.products.reduce((s,p)=>s+Number(p.stock||0)*Number(p.price||0),0);
-  document.getElementById('statValue').textContent = fmtMoney(totalValue);
   const today = todayStr();
   const todayCount = state.transactions.filter(t=>t.date.slice(0,10)===today).length;
   document.getElementById('statToday').innerHTML = todayCount + '<span>ครั้ง</span>';
@@ -602,9 +708,15 @@ function renderGrid(){
   const search = document.getElementById('searchInput').value.trim().toLowerCase();
   const cat = document.getElementById('catFilter').value;
   let list = state.products.filter(p=>{
-    const matchSearch = !search || p.name.toLowerCase().includes(search);
+    const matchSearch = !search || p.name.toLowerCase().includes(search) || (p.category||'').toLowerCase().includes(search);
     const matchCat = !cat || p.category === cat;
     return matchSearch && matchCat;
+  });
+  list.sort((a,b)=>{
+    const aOut = Number(a.stock||0) <= 0 ? 0 : 1;
+    const bOut = Number(b.stock||0) <= 0 ? 0 : 1;
+    if(aOut !== bOut) return aOut - bOut; // สินค้าหมดขึ้นก่อนเสมอ
+    return (a.name||'').localeCompare(b.name||'', 'th');
   });
   const grid = document.getElementById('productGrid');
   const empty = document.getElementById('emptyState');
@@ -629,12 +741,13 @@ function renderGrid(){
       ? `<img src="${p.image}" alt="${escapeHtml(p.name)}">`
       : `<div class="card-img-placeholder">${escapeHtml((p.name||'?').slice(0,1).toUpperCase())}</div>`;
 
-    const value = stock * Number(p.price||0);
+    const isOut = stock <= 0;
 
     return `
-    <div class="card" data-id="${p.id}">
+    <div class="card ${isOut ? 'is-out' : ''}" data-id="${p.id}">
       <div class="card-img-wrap">
         ${imgHtml}
+        ${isOut ? '<div class="out-ribbon">สินค้าหมด</div>' : ''}
         <div class="stamp ${stampClass}">${stampText}</div>
       </div>
       <div class="card-body">
@@ -647,7 +760,6 @@ function renderGrid(){
           <div class="stock-num">${fmt(stock)}</div>
           <div class="stock-unit">${escapeHtml(p.unit||'ชิ้น')}</div>
         </div>
-        ${p.price ? `<div class="value-row">มูลค่ารวม: <b>${fmtMoney(value)}</b></div>` : ''}
         <div class="card-actions">
           <button class="btn btn-outline-green btn-sm" data-action="in" data-id="${p.id}">↧ รับเข้า</button>
           <button class="btn btn-outline-rust btn-sm" data-action="out" data-id="${p.id}">↥ จ่ายออก</button>
@@ -1011,6 +1123,190 @@ document.addEventListener('keydown', (e)=>{
     if(document.getElementById('paletteOverlay').classList.contains('show')) closePalette();
   }
 });
+
+// ---------- bulk stock in/out (multiple products at once) ----------
+function openBulkModal(type){
+  bulkType = type;
+  bulkCart = [];
+  document.getElementById('bulkModalTitle').textContent = type==='in' ? 'รับสินค้าเข้าหลายรายการ' : 'จ่ายสินค้าออกหลายรายการ (เบิก)';
+  document.getElementById('bulkNote').value = '';
+  document.getElementById('bulkSearchInput').value = '';
+  document.getElementById('bulkSearchResults').classList.remove('show');
+  document.getElementById('bulkSearchResults').innerHTML = '';
+  renderBulkCart();
+  openOverlay('bulkOverlay');
+  setTimeout(()=>document.getElementById('bulkSearchInput').focus(), 50);
+}
+document.getElementById('bulkInBtn').addEventListener('click', ()=>openBulkModal('in'));
+document.getElementById('bulkOutBtn').addEventListener('click', ()=>openBulkModal('out'));
+
+document.getElementById('bulkSearchInput').addEventListener('input', (e)=>{
+  const q = e.target.value.trim().toLowerCase();
+  const results = document.getElementById('bulkSearchResults');
+  if(!q){ results.classList.remove('show'); results.innerHTML=''; return; }
+  const matches = state.products.filter(p=>
+    !bulkCart.find(c=>c.productId===p.id) &&
+    (p.name.toLowerCase().includes(q) || (p.category||'').toLowerCase().includes(q))
+  ).slice(0,8);
+  if(matches.length===0){
+    results.innerHTML = '<div class="bulk-search-row"><span class="n" style="color:var(--ink-faint);">ไม่พบสินค้า</span></div>';
+    results.classList.add('show');
+    return;
+  }
+  results.innerHTML = matches.map(p=>`<div class="bulk-search-row" data-id="${p.id}"><span class="n">${escapeHtml(p.name)}</span><span class="s">คงเหลือ ${fmt(p.stock)} ${escapeHtml(p.unit||'ชิ้น')}</span></div>`).join('');
+  results.classList.add('show');
+});
+document.getElementById('bulkSearchResults').addEventListener('click', (e)=>{
+  const row = e.target.closest('.bulk-search-row[data-id]');
+  if(!row) return;
+  const p = state.products.find(x=>x.id===row.dataset.id);
+  if(!p) return;
+  bulkCart.push({ productId:p.id, name:p.name, unit:p.unit||'ชิ้น', stock:Number(p.stock||0), qty:'', price: p.price || '' });
+  document.getElementById('bulkSearchInput').value = '';
+  document.getElementById('bulkSearchResults').classList.remove('show');
+  document.getElementById('bulkSearchResults').innerHTML = '';
+  renderBulkCart();
+  const lastQty = document.querySelector(`.bulk-qty[data-idx="${bulkCart.length-1}"]`);
+  if(lastQty) setTimeout(()=>lastQty.focus(), 30);
+});
+
+function renderBulkCart(){
+  const wrap = document.getElementById('bulkCartList');
+  const empty = document.getElementById('bulkCartEmpty');
+  if(bulkCart.length===0){ empty.style.display='block'; wrap.innerHTML=''; return; }
+  empty.style.display='none';
+  wrap.innerHTML = bulkCart.map((item,idx)=>{
+    const qty = safeEval(item.qty) || 0;
+    const after = bulkType==='in' ? item.stock+qty : item.stock-qty;
+    const warn = (bulkType==='out' && qty > item.stock) ? `<div class="bulk-warn">⚠ เกินคงเหลือ (มี ${fmt(item.stock)} ${escapeHtml(item.unit)})</div>` : '';
+    return `<div class="bulk-row" data-idx="${idx}">
+      <div class="bulk-name">
+        <div class="n">${escapeHtml(item.name)}</div>
+        <div class="s">คงเหลือ ${fmt(item.stock)} → <b>${qty>0?fmt(after):'-'}</b> ${escapeHtml(item.unit)}</div>
+        ${warn}
+      </div>
+      <div class="bulk-fields">
+        <div>
+          <label>จำนวน</label>
+          <input type="text" inputmode="decimal" class="bulk-qty" data-idx="${idx}" value="${escapeHtml(item.qty)}" placeholder="0">
+        </div>
+        <div>
+          <label>ราคา/หน่วย</label>
+          <input type="text" inputmode="decimal" class="bulk-price" data-idx="${idx}" value="${escapeHtml(item.price)}" placeholder="0.00">
+        </div>
+      </div>
+      <button class="bulk-remove" data-idx="${idx}" title="เอาออก">×</button>
+    </div>`;
+  }).join('');
+}
+function updateBulkRowPreview(idx){
+  const item = bulkCart[idx];
+  const row = document.querySelector(`.bulk-row[data-idx="${idx}"]`);
+  if(!item || !row) return;
+  const qty = safeEval(item.qty) || 0;
+  const after = bulkType==='in' ? item.stock+qty : item.stock-qty;
+  const sEl = row.querySelector('.s');
+  sEl.innerHTML = `คงเหลือ ${fmt(item.stock)} → <b>${qty>0?fmt(after):'-'}</b> ${escapeHtml(item.unit)}`;
+  let warnEl = row.querySelector('.bulk-warn');
+  const shouldWarn = bulkType==='out' && qty > item.stock;
+  if(shouldWarn && !warnEl){
+    warnEl = document.createElement('div'); warnEl.className='bulk-warn';
+    row.querySelector('.bulk-name').appendChild(warnEl);
+  }
+  if(warnEl) warnEl.textContent = shouldWarn ? `⚠ เกินคงเหลือ (มี ${fmt(item.stock)} ${item.unit})` : '';
+  if(warnEl && !shouldWarn) warnEl.remove();
+}
+document.getElementById('bulkCartList').addEventListener('input', (e)=>{
+  const idx = e.target.dataset.idx;
+  if(idx==null) return;
+  const item = bulkCart[idx];
+  if(!item) return;
+  if(e.target.classList.contains('bulk-qty')) item.qty = e.target.value;
+  if(e.target.classList.contains('bulk-price')) item.price = e.target.value;
+  updateBulkRowPreview(idx);
+});
+document.getElementById('bulkCartList').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.bulk-remove');
+  if(!btn) return;
+  bulkCart.splice(Number(btn.dataset.idx),1);
+  renderBulkCart();
+});
+
+document.getElementById('saveBulkBtn').addEventListener('click', async ()=>{
+  if(!db){ showToast('ยังไม่ได้เชื่อมต่อฐานข้อมูล'); return; }
+  if(bulkCart.length===0){ showToast('กรุณาเพิ่มสินค้าอย่างน้อย 1 รายการ'); return; }
+  const note = document.getElementById('bulkNote').value.trim();
+  const validItems = [];
+  for(const item of bulkCart){
+    const qty = safeEval(item.qty);
+    if(!qty || qty<=0 || isNaN(qty)){ showToast(`กรุณากรอกจำนวนของ "${item.name}" ให้ถูกต้อง`); return; }
+    if(bulkType==='out' && qty > item.stock){ showToast(`"${item.name}" เบิกเกินจำนวนคงเหลือ`); return; }
+    const priceVal = safeEval(item.price);
+    validItems.push({ item, qty, price: (!isNaN(priceVal) && priceVal>=0) ? priceVal : null });
+  }
+  try{
+    const batch = db.batch();
+    const now = new Date().toISOString();
+    validItems.forEach(({item,qty,price})=>{
+      const newStock = Math.round((bulkType==='in' ? item.stock+qty : item.stock-qty)*100)/100;
+      const t = { id: uid(), productId: item.productId, type: bulkType, qty, note, date: now, balanceAfter: newStock };
+      if(price !== null) t.price = price;
+      const productUpdate = { stock: newStock };
+      if(price !== null && bulkType==='in') productUpdate.price = price;
+      batch.update(db.collection('products').doc(item.productId), productUpdate);
+      batch.set(db.collection('transactions').doc(t.id), t);
+    });
+    await batch.commit();
+    closeOverlay('bulkOverlay');
+    showToast(`บันทึก${bulkType==='in'?'รับเข้า':'จ่ายออก'} ${validItems.length} รายการแล้ว`);
+  }catch(e){
+    showToast('บันทึกไม่สำเร็จ: ' + e.message);
+  }
+});
+
+// ---------- global history (all "in" or all "out" transactions across products) ----------
+function openGlobalHistory(type){
+  globalHistType = type;
+  document.getElementById('globalHistTitle').textContent = type==='in' ? 'ประวัติรับเข้าทั้งหมด' : 'ประวัติจ่ายออกทั้งหมด';
+  document.getElementById('globalHistSearch').value = '';
+  renderGlobalHistory('');
+  openOverlay('globalHistOverlay');
+}
+document.getElementById('histInBtn').addEventListener('click', ()=>openGlobalHistory('in'));
+document.getElementById('histOutBtn').addEventListener('click', ()=>openGlobalHistory('out'));
+document.getElementById('globalHistSearch').addEventListener('input', (e)=>renderGlobalHistory(e.target.value));
+
+function renderGlobalHistory(qRaw){
+  const q = (qRaw||'').trim().toLowerCase();
+  const items = state.transactions
+    .filter(t=>t.type===globalHistType)
+    .map(t=>({...t, productName: (state.products.find(p=>p.id===t.productId)||{}).name || 'สินค้าที่ถูกลบ'}))
+    .filter(t=> !q || t.productName.toLowerCase().includes(q))
+    .sort((a,b)=>new Date(b.date)-new Date(a.date));
+
+  const totalQty = items.reduce((s,t)=>s+Number(t.qty||0),0);
+  const totalValue = items.reduce((s,t)=> s + (t.price!=null ? Number(t.qty||0)*Number(t.price) : 0), 0);
+  document.getElementById('globalHistSummary').innerHTML = `รวม <b>${fmt(totalQty)}</b> หน่วย จาก ${items.length} รายการ${totalValue>0 ? ` · มูลค่ารวม <b>${fmtMoney(totalValue)}</b>` : ''}`;
+
+  const list = document.getElementById('globalHistList');
+  if(items.length===0){ list.innerHTML = '<div class="ledger-empty">ไม่มีประวัติรายการ</div>'; return; }
+  list.innerHTML = items.map(t=>{
+    const d = new Date(t.date);
+    const dateStr = d.toLocaleDateString('th-TH',{day:'2-digit',month:'short',year:'2-digit'}) + ' · ' + d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+    const sign = t.type==='in' ? '+' : '−';
+    return `<div class="ledger-row">
+      <div class="ledger-left">
+        <div class="ledger-date">${dateStr}</div>
+        <div class="ledger-note" style="font-weight:600;color:var(--ink);white-space:normal;max-width:none;">${escapeHtml(t.productName)}</div>
+        ${t.note ? `<div class="ledger-note">${escapeHtml(t.note)}</div>` : ''}
+      </div>
+      <div class="ledger-right">
+        <div class="ledger-qty ${t.type}">${sign}${fmt(t.qty)}</div>
+        ${t.price!=null ? `<div class="ledger-bal">@${fmtMoney(t.price)}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
 
 // ---------- init ----------
 initApp();
