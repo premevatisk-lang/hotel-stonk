@@ -540,7 +540,6 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
       <div class="field">
         <input type="text" id="globalHistSearch" placeholder="ค้นหาชื่อสินค้าในประวัติ...">
       </div>
-      <div class="calc-result" id="globalHistSummary"></div>
       <div id="globalHistList" style="max-height:50vh;overflow-y:auto;"></div>
     </div>
     <div class="modal-foot">
@@ -1367,10 +1366,6 @@ function renderGlobalHistory(qRaw){
     .filter(t=> !q || t.productName.toLowerCase().includes(q))
     .sort((a,b)=>new Date(b.date)-new Date(a.date));
 
-  const totalQty = items.reduce((s,t)=>s+Number(t.qty||0),0);
-  const totalValue = items.reduce((s,t)=> s + (t.price!=null ? Number(t.qty||0)*Number(t.price) : 0), 0);
-  document.getElementById('globalHistSummary').innerHTML = `รวม <b>${fmt(totalQty)}</b> หน่วย จาก ${items.length} รายการ${totalValue>0 ? ` · มูลค่ารวม <b>${fmtMoney(totalValue)}</b>` : ''}`;
-
   const list = document.getElementById('globalHistList');
   if(items.length===0){ list.innerHTML = '<div class="ledger-empty">ไม่มีประวัติรายการ</div>'; return; }
 
@@ -1385,11 +1380,15 @@ function renderGlobalHistory(qRaw){
   list.innerHTML = dateKeys.map(key=>{
     const dayItems = groups[key];
     const dayQty = dayItems.reduce((s,t)=>s+Number(t.qty||0),0);
+    const dayValue = dayItems.reduce((s,t)=> s + (t.price!=null ? Number(t.qty||0)*Number(t.price) : 0), 0);
     const isOpen = globalHistOpenDates.has(key);
+    const dayMeta = globalHistType === 'in'
+      ? `รับเข้าทั้งหมด ${fmt(dayQty)} หน่วย${dayValue>0 ? ` · รวม ${fmtMoney(dayValue)}` : ''}`
+      : `จ่ายออกทั้งหมด ${fmt(dayQty)} หน่วย`;
     return `<div class="hist-day ${isOpen ? 'open' : ''}" data-date="${key}">
       <div class="hist-day-head">
         <span>${formatDateHeader(key)}</span>
-        <span class="meta">${dayItems.length} รายการ · ${fmt(dayQty)} หน่วย <span class="hist-day-toggle">▾</span></span>
+        <span class="meta">${dayMeta} <span class="hist-day-toggle">▾</span></span>
       </div>
       <div class="hist-day-body">${renderDayRows(dayItems)}</div>
     </div>`;
