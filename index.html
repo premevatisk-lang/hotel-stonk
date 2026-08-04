@@ -74,6 +74,10 @@ body{background-color:var(--paper);color:var(--ink);font-family:'Noto Sans Thai'
 .stat-label{font-size:11px;color:var(--ink-soft);font-family:'IBM Plex Mono';letter-spacing:.3px;}
 .stat-value{font-family:'Kanit';font-weight:700;font-size:24px;margin-top:4px;}
 .stat-value span{font-size:12.5px;font-family:'Noto Sans Thai';font-weight:500;color:var(--ink-soft);margin-left:4px;}
+.stat-card.clickable{cursor:pointer;}
+.stat-card.clickable:hover{box-shadow:var(--shadow);transform:translateY(-1px);}
+.stat-card.clickable.active{outline:2px solid var(--rust);}
+.stat-hint{font-size:10px;color:var(--ink-faint);font-weight:500;margin-top:1px;}
 
 /* ---------- activity strip ---------- */
 .activity{background:var(--surface);border:1px dashed var(--border);border-radius:8px;padding:10px 14px;margin-bottom:20px;display:flex;align-items:center;gap:14px;overflow-x:auto;}
@@ -107,6 +111,8 @@ select.cat-filter{padding:10px 12px;border:1.5px solid var(--border);border-radi
 select.cat-filter:focus{outline:none;border-color:var(--ink);}
 
 /* ---------- product grid ---------- */
+.filter-status{display:flex;align-items:center;gap:8px;background:var(--rust-tint);border:1px dashed var(--rust);color:var(--rust);border-radius:8px;padding:9px 14px;margin-bottom:14px;font-size:13px;font-family:'Noto Sans Thai';font-weight:600;}
+.filter-status a{color:var(--rust);text-decoration:underline;cursor:pointer;font-weight:700;}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:16px;}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:9px;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .15s ease, transform .15s ease;}
 .card:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
@@ -130,8 +136,6 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
 .stock-unit{font-size:12px;color:var(--ink-soft);}
 .value-row{font-family:'IBM Plex Mono';font-size:11.5px;color:var(--ink-soft);margin-top:-4px;}
 .value-row b{color:var(--amber);}
-.card-actions{display:flex;gap:6px;margin-top:2px;}
-.card-actions .btn{flex:1;justify-content:center;padding:8px 6px;font-size:12.5px;}
 .card-footer{display:flex;justify-content:space-between;font-family:'IBM Plex Mono';font-size:10.5px;color:var(--ink-faint);margin-top:4px;}
 .card-footer a{color:var(--ink-soft);cursor:pointer;text-decoration:none;border-bottom:1px dotted var(--ink-faint);}
 .card-footer a:hover{color:var(--ink);}
@@ -145,6 +149,7 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
 /* ---------- modal ---------- */
 .overlay{position:fixed;inset:0;background:rgba(32,43,34,0.45);display:none;align-items:center;justify-content:center;z-index:50;padding:20px;}
 .overlay.show{display:flex;}
+#confirmOverlay{z-index:55;}
 .modal{background:var(--surface);border-radius:10px;width:100%;max-width:420px;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.25);border:1px solid var(--border);}
 .modal-head{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--border);}
 .modal-head h3{font-family:'Kanit';font-weight:600;font-size:17px;margin:0;}
@@ -185,9 +190,13 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
 .type-toggle button.active.out{border-color:var(--rust);background:var(--rust-tint);color:var(--rust);}
 
 /* ---------- bulk stock modal ---------- */
-.bulk-search-results{margin-top:6px;max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;display:none;}
-.bulk-search-results.show{display:block;}
-.bulk-search-row{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;border-bottom:1px dotted var(--border);font-size:13px;}
+.bulk-cat-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px;}
+.bulk-cat-tab{padding:6px 13px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);font-family:'Noto Sans Thai';font-size:12.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;}
+.bulk-cat-tab:hover{border-color:var(--ink);color:var(--ink);}
+.bulk-cat-tab.active{background:var(--ink);border-color:var(--ink);color:var(--paper);}
+.bulk-browse-list{margin-top:9px;max-height:190px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;}
+.bulk-browse-empty{text-align:center;color:var(--ink-faint);font-size:12.5px;padding:20px 10px;}
+.bulk-search-row{display:flex;align-items:center;gap:8px;padding:9px 11px;cursor:pointer;border-bottom:1px dotted var(--border);font-size:13px;}
 .bulk-search-row:last-child{border-bottom:none;}
 .bulk-search-row:hover{background:var(--paper);}
 .bulk-search-row .n{font-weight:600;flex:1;}
@@ -204,6 +213,14 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
 .bulk-warn{color:var(--rust);font-size:11px;margin-top:4px;font-family:'IBM Plex Mono';}
 
 /* ---------- history drawer ---------- */
+.hist-day{border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;}
+.hist-day-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 14px;background:var(--paper);cursor:pointer;font-family:'Kanit';font-weight:600;font-size:13.5px;}
+.hist-day-head:hover{background:var(--paper-deep);}
+.hist-day-head .meta{display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono';font-size:11px;color:var(--ink-soft);font-weight:500;white-space:nowrap;}
+.hist-day-toggle{display:inline-block;transition:transform .2s ease;color:var(--ink-faint);}
+.hist-day.open .hist-day-toggle{transform:rotate(180deg);}
+.hist-day-body{max-height:0;overflow:hidden;transition:max-height .25s ease;padding:0 14px;}
+.hist-day.open .hist-day-body{max-height:2000px;padding:6px 14px 8px;}
 .drawer-overlay{position:fixed;inset:0;background:rgba(32,43,34,0.4);display:none;z-index:60;}
 .drawer-overlay.show{display:block;}
 .drawer{position:fixed;top:0;right:0;bottom:0;width:100%;max-width:420px;background:var(--surface);box-shadow:-8px 0 30px rgba(0,0,0,0.15);transform:translateX(100%);transition:transform .25s ease;display:flex;flex-direction:column;z-index:61;}
@@ -275,7 +292,6 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
       </div>
     </div>
     <div class="header-actions">
-      <button class="btn btn-ghost btn-sm" id="resetBtn">ล้างข้อมูล</button>
       <button class="btn btn-amber" id="quickSearchBtn">🔍 ค้นหาด่วน <span style="opacity:.7;font-size:11px;">(/)</span></button>
       <button class="btn btn-primary" id="addProductBtn">+ เพิ่มสินค้า</button>
     </div>
@@ -303,9 +319,10 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
         <div class="stat-label">คงคลังรวม</div>
         <div class="stat-value" id="statStock">0<span>หน่วย</span></div>
       </div>
-      <div class="stat-card rust">
-        <div class="stat-label">รายการวันนี้</div>
-        <div class="stat-value" id="statToday">0<span>ครั้ง</span></div>
+      <div class="stat-card rust clickable" id="statOutCard">
+        <div class="stat-label">สินค้าหมด</div>
+        <div class="stat-value" id="statOut">0<span>รายการ</span></div>
+        <div class="stat-hint">กดเพื่อกรองดูเฉพาะสินค้าหมด</div>
       </div>
     </div>
 
@@ -341,6 +358,8 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
         <option value="">ทุกหมวดหมู่</option>
       </select>
     </div>
+
+    <div id="filterStatusBar"></div>
 
     <div class="grid" id="productGrid"></div>
 
@@ -489,9 +508,10 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
     </div>
     <div class="modal-body">
       <div class="field">
-        <label>ค้นหาสินค้าเพื่อเพิ่มลงรายการ</label>
-        <input type="text" id="bulkSearchInput" placeholder="พิมพ์ชื่อสินค้าหรือหมวดหมู่...">
-        <div id="bulkSearchResults" class="bulk-search-results"></div>
+        <label>เลือกสินค้าเพื่อเพิ่มลงรายการ</label>
+        <input type="text" id="bulkSearchInput" placeholder="พิมพ์ค้นหา (ไม่บังคับ)...">
+        <div class="bulk-cat-tabs" id="bulkCatTabs"></div>
+        <div class="bulk-browse-list" id="bulkBrowseList"></div>
       </div>
       <div class="field">
         <label>หมายเหตุ (ใช้กับทุกรายการ ไม่บังคับ)</label>
@@ -585,13 +605,15 @@ let confirmCallback = null;
 let pendingImage = null;
 let bulkType = 'in';
 let bulkCart = [];
+let bulkSelectedCategory = '';
 let globalHistType = 'in';
+let globalHistOpenDates = new Set();
+let showOnlyOut = false;
 
 // ---------- helpers ----------
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function fmt(n){ return Number(n).toLocaleString('th-TH', {maximumFractionDigits:2}); }
 function fmtMoney(n){ return '฿' + Number(n||0).toLocaleString('th-TH', {maximumFractionDigits:2}); }
-function todayStr(){ return new Date().toISOString().slice(0,10); }
 function showToast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
@@ -599,8 +621,22 @@ function showToast(msg){
 }
 function openOverlay(id){ document.getElementById(id).classList.add('show'); }
 function closeOverlay(id){ document.getElementById(id).classList.remove('show'); }
-document.querySelectorAll('[data-close]').forEach(btn=> btn.addEventListener('click', ()=> closeOverlay(btn.dataset.close)));
-document.querySelectorAll('.overlay').forEach(ov=> ov.addEventListener('click', (e)=>{ if(e.target === ov) closeOverlay(ov.id); }));
+document.querySelectorAll('[data-close]').forEach(btn=> btn.addEventListener('click', ()=>{
+  const target = btn.dataset.close;
+  if(target === 'bulkOverlay' && bulkCart.length > 0) confirmBulkClose();
+  else closeOverlay(target);
+}));
+document.querySelectorAll('.overlay').forEach(ov=> ov.addEventListener('click', (e)=>{
+  if(e.target !== ov) return;
+  if(ov.id === 'bulkOverlay' && bulkCart.length > 0) confirmBulkClose();
+  else closeOverlay(ov.id);
+}));
+function confirmBulkClose(){
+  document.getElementById('confirmTitle').textContent = 'ยังไม่ได้บันทึกรายการ';
+  document.getElementById('confirmMsg').textContent = `คุณมี ${bulkCart.length} รายการที่ยังไม่ได้บันทึก ต้องการออกโดยไม่บันทึกหรือไม่?`;
+  confirmCallback = ()=>{ closeOverlay('confirmOverlay'); closeOverlay('bulkOverlay'); };
+  openOverlay('confirmOverlay');
+}
 
 // Safe math expression evaluator — supports things like "2*24+3" for bulk receiving
 // (boxes x pieces) without forcing manual one-by-one counting.
@@ -669,9 +705,8 @@ function renderStats(){
   document.getElementById('statCount').innerHTML = state.products.length + '<span>รายการ</span>';
   const totalStock = state.products.reduce((s,p)=>s+Number(p.stock||0),0);
   document.getElementById('statStock').innerHTML = fmt(totalStock) + '<span>หน่วย</span>';
-  const today = todayStr();
-  const todayCount = state.transactions.filter(t=>t.date.slice(0,10)===today).length;
-  document.getElementById('statToday').innerHTML = todayCount + '<span>ครั้ง</span>';
+  const outCount = state.products.filter(p=>Number(p.stock||0) <= 0).length;
+  document.getElementById('statOut').innerHTML = outCount + '<span>รายการ</span>';
 }
 
 function renderActivity(){
@@ -710,8 +745,12 @@ function renderGrid(){
   let list = state.products.filter(p=>{
     const matchSearch = !search || p.name.toLowerCase().includes(search) || (p.category||'').toLowerCase().includes(search);
     const matchCat = !cat || p.category === cat;
-    return matchSearch && matchCat;
+    const matchOut = !showOnlyOut || Number(p.stock||0) <= 0;
+    return matchSearch && matchCat && matchOut;
   });
+  document.getElementById('filterStatusBar').innerHTML = showOnlyOut
+    ? '<div class="filter-status">🔻 กำลังแสดงเฉพาะสินค้าหมด · <a id="clearOutFilter">ล้างตัวกรอง</a></div>'
+    : '';
   list.sort((a,b)=>{
     const aOut = Number(a.stock||0) <= 0 ? 0 : 1;
     const bOut = Number(b.stock||0) <= 0 ? 0 : 1;
@@ -760,10 +799,6 @@ function renderGrid(){
           <div class="stock-num">${fmt(stock)}</div>
           <div class="stock-unit">${escapeHtml(p.unit||'ชิ้น')}</div>
         </div>
-        <div class="card-actions">
-          <button class="btn btn-outline-green btn-sm" data-action="in" data-id="${p.id}">↧ รับเข้า</button>
-          <button class="btn btn-outline-rust btn-sm" data-action="out" data-id="${p.id}">↥ จ่ายออก</button>
-        </div>
         <div class="card-footer">
           <a data-action="history" data-id="${p.id}">ประวัติ</a>
           <a data-action="edit" data-id="${p.id}">แก้ไข</a>
@@ -778,14 +813,23 @@ document.getElementById('productGrid').addEventListener('click', (e)=>{
   const target = e.target.closest('[data-action]');
   if(!target) return;
   const id = target.dataset.id, action = target.dataset.action;
-  if(action === 'in') openStockModal(id,'in');
-  else if(action === 'out') openStockModal(id,'out');
-  else if(action === 'history') openHistoryDrawer(id);
+  if(action === 'history') openHistoryDrawer(id);
   else if(action === 'edit') openProductModal(id);
   else if(action === 'delete') askDeleteProduct(id);
 });
 document.getElementById('searchInput').addEventListener('input', renderGrid);
 document.getElementById('catFilter').addEventListener('change', renderGrid);
+document.getElementById('statOutCard').addEventListener('click', ()=>{
+  showOnlyOut = !showOnlyOut;
+  document.getElementById('statOutCard').classList.toggle('active', showOnlyOut);
+  renderGrid();
+});
+document.getElementById('filterStatusBar').addEventListener('click', (e)=>{
+  if(e.target.id !== 'clearOutFilter') return;
+  showOnlyOut = false;
+  document.getElementById('statOutCard').classList.remove('active');
+  renderGrid();
+});
 
 // ---------- product modal ----------
 function openProductModal(id){
@@ -922,24 +966,6 @@ function askDeleteProduct(id){
   openOverlay('confirmOverlay');
 }
 document.getElementById('confirmActionBtn').addEventListener('click', ()=>{ if(confirmCallback) confirmCallback(); });
-
-document.getElementById('resetBtn').addEventListener('click', ()=>{
-  document.getElementById('confirmTitle').textContent = 'ล้างข้อมูลทั้งหมด';
-  document.getElementById('confirmMsg').textContent = 'จะลบสินค้าและประวัติรายการทั้งหมดอย่างถาวรจากฐานข้อมูล ไม่สามารถกู้คืนได้ ยืนยันหรือไม่?';
-  confirmCallback = async ()=>{
-    try{
-      const batch = db.batch();
-      const pSnap = await db.collection('products').get();
-      pSnap.forEach(doc=>batch.delete(doc.ref));
-      const tSnap = await db.collection('transactions').get();
-      tSnap.forEach(doc=>batch.delete(doc.ref));
-      await batch.commit();
-      closeOverlay('confirmOverlay');
-      showToast('ล้างข้อมูลแล้ว');
-    }catch(e){ showToast('ล้างข้อมูลไม่สำเร็จ: ' + e.message); }
-  };
-  openOverlay('confirmOverlay');
-});
 
 // ---------- stock modal ----------
 function openStockModal(id, type){
@@ -1128,43 +1154,60 @@ document.addEventListener('keydown', (e)=>{
 function openBulkModal(type){
   bulkType = type;
   bulkCart = [];
+  bulkSelectedCategory = '';
   document.getElementById('bulkModalTitle').textContent = type==='in' ? 'รับสินค้าเข้าหลายรายการ' : 'จ่ายสินค้าออกหลายรายการ (เบิก)';
   document.getElementById('bulkNote').value = '';
   document.getElementById('bulkSearchInput').value = '';
-  document.getElementById('bulkSearchResults').classList.remove('show');
-  document.getElementById('bulkSearchResults').innerHTML = '';
+  renderBulkCatTabs();
+  renderBulkBrowseList();
   renderBulkCart();
   openOverlay('bulkOverlay');
-  setTimeout(()=>document.getElementById('bulkSearchInput').focus(), 50);
 }
 document.getElementById('bulkInBtn').addEventListener('click', ()=>openBulkModal('in'));
 document.getElementById('bulkOutBtn').addEventListener('click', ()=>openBulkModal('out'));
 
-document.getElementById('bulkSearchInput').addEventListener('input', (e)=>{
-  const q = e.target.value.trim().toLowerCase();
-  const results = document.getElementById('bulkSearchResults');
-  if(!q){ results.classList.remove('show'); results.innerHTML=''; return; }
-  const matches = state.products.filter(p=>
-    !bulkCart.find(c=>c.productId===p.id) &&
-    (p.name.toLowerCase().includes(q) || (p.category||'').toLowerCase().includes(q))
-  ).slice(0,8);
-  if(matches.length===0){
-    results.innerHTML = '<div class="bulk-search-row"><span class="n" style="color:var(--ink-faint);">ไม่พบสินค้า</span></div>';
-    results.classList.add('show');
-    return;
-  }
-  results.innerHTML = matches.map(p=>`<div class="bulk-search-row" data-id="${p.id}"><span class="n">${escapeHtml(p.name)}</span><span class="s">คงเหลือ ${fmt(p.stock)} ${escapeHtml(p.unit||'ชิ้น')}</span></div>`).join('');
-  results.classList.add('show');
+function renderBulkCatTabs(){
+  const cats = [...new Set(state.products.map(p=>p.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'th'));
+  const hasUncategorized = state.products.some(p=>!p.category);
+  const tabsWrap = document.getElementById('bulkCatTabs');
+  let html = `<button type="button" class="bulk-cat-tab ${bulkSelectedCategory===''?'active':''}" data-cat="">ทั้งหมด</button>`;
+  html += cats.map(c=>`<button type="button" class="bulk-cat-tab ${bulkSelectedCategory===c?'active':''}" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('');
+  if(hasUncategorized) html += `<button type="button" class="bulk-cat-tab ${bulkSelectedCategory==='__none__'?'active':''}" data-cat="__none__">ไม่มีหมวดหมู่</button>`;
+  tabsWrap.innerHTML = html;
+}
+document.getElementById('bulkCatTabs').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.bulk-cat-tab');
+  if(!btn) return;
+  bulkSelectedCategory = btn.dataset.cat;
+  renderBulkCatTabs();
+  renderBulkBrowseList();
 });
-document.getElementById('bulkSearchResults').addEventListener('click', (e)=>{
+
+function renderBulkBrowseList(){
+  const q = document.getElementById('bulkSearchInput').value.trim().toLowerCase();
+  let matches = state.products.filter(p=> !bulkCart.find(c=>c.productId===p.id));
+  if(bulkSelectedCategory === '__none__') matches = matches.filter(p=>!p.category);
+  else if(bulkSelectedCategory) matches = matches.filter(p=>p.category===bulkSelectedCategory);
+  if(q) matches = matches.filter(p=>p.name.toLowerCase().includes(q) || (p.category||'').toLowerCase().includes(q));
+  matches.sort((a,b)=>a.name.localeCompare(b.name,'th'));
+  const wrap = document.getElementById('bulkBrowseList');
+  if(matches.length===0){ wrap.innerHTML = '<div class="bulk-browse-empty">ไม่พบสินค้าในหมวดนี้</div>'; return; }
+  wrap.innerHTML = matches.map(p=>`<div class="bulk-search-row" data-id="${p.id}"><span class="n">${escapeHtml(p.name)}</span><span class="s">คงเหลือ ${fmt(p.stock)} ${escapeHtml(p.unit||'ชิ้น')}</span></div>`).join('');
+}
+document.getElementById('bulkSearchInput').addEventListener('input', renderBulkBrowseList);
+document.getElementById('bulkSearchInput').addEventListener('keydown', (e)=>{
+  if(e.key !== 'Enter') return;
+  e.preventDefault();
+  const first = document.querySelector('#bulkBrowseList .bulk-search-row[data-id]');
+  if(first) first.click();
+});
+document.getElementById('bulkBrowseList').addEventListener('click', (e)=>{
   const row = e.target.closest('.bulk-search-row[data-id]');
   if(!row) return;
   const p = state.products.find(x=>x.id===row.dataset.id);
   if(!p) return;
   bulkCart.push({ productId:p.id, name:p.name, unit:p.unit||'ชิ้น', stock:Number(p.stock||0), qty:'', price: p.price || '' });
-  document.getElementById('bulkSearchInput').value = '';
-  document.getElementById('bulkSearchResults').classList.remove('show');
-  document.getElementById('bulkSearchResults').innerHTML = '';
+  renderBulkBrowseList();
   renderBulkCart();
   const lastQty = document.querySelector(`.bulk-qty[data-idx="${bulkCart.length-1}"]`);
   if(lastQty) setTimeout(()=>lastQty.focus(), 30);
@@ -1173,6 +1216,7 @@ document.getElementById('bulkSearchResults').addEventListener('click', (e)=>{
 function renderBulkCart(){
   const wrap = document.getElementById('bulkCartList');
   const empty = document.getElementById('bulkCartEmpty');
+  document.getElementById('saveBulkBtn').textContent = bulkCart.length > 0 ? `บันทึกทั้งหมด (${bulkCart.length} รายการ)` : 'บันทึกทั้งหมด';
   if(bulkCart.length===0){ empty.style.display='block'; wrap.innerHTML=''; return; }
   empty.style.display='none';
   wrap.innerHTML = bulkCart.map((item,idx)=>{
@@ -1190,10 +1234,10 @@ function renderBulkCart(){
           <label>จำนวน</label>
           <input type="text" inputmode="decimal" class="bulk-qty" data-idx="${idx}" value="${escapeHtml(item.qty)}" placeholder="0">
         </div>
-        <div>
+        ${bulkType==='in' ? `<div>
           <label>ราคา/หน่วย</label>
           <input type="text" inputmode="decimal" class="bulk-price" data-idx="${idx}" value="${escapeHtml(item.price)}" placeholder="0.00">
-        </div>
+        </div>` : ''}
       </div>
       <button class="bulk-remove" data-idx="${idx}" title="เอาออก">×</button>
     </div>`;
@@ -1230,6 +1274,7 @@ document.getElementById('bulkCartList').addEventListener('click', (e)=>{
   if(!btn) return;
   bulkCart.splice(Number(btn.dataset.idx),1);
   renderBulkCart();
+  renderBulkBrowseList();
 });
 
 document.getElementById('saveBulkBtn').addEventListener('click', async ()=>{
@@ -1241,7 +1286,7 @@ document.getElementById('saveBulkBtn').addEventListener('click', async ()=>{
     const qty = safeEval(item.qty);
     if(!qty || qty<=0 || isNaN(qty)){ showToast(`กรุณากรอกจำนวนของ "${item.name}" ให้ถูกต้อง`); return; }
     if(bulkType==='out' && qty > item.stock){ showToast(`"${item.name}" เบิกเกินจำนวนคงเหลือ`); return; }
-    const priceVal = safeEval(item.price);
+    const priceVal = bulkType==='in' ? safeEval(item.price) : NaN;
     validItems.push({ item, qty, price: (!isNaN(priceVal) && priceVal>=0) ? priceVal : null });
   }
   try{
@@ -1267,6 +1312,7 @@ document.getElementById('saveBulkBtn').addEventListener('click', async ()=>{
 // ---------- global history (all "in" or all "out" transactions across products) ----------
 function openGlobalHistory(type){
   globalHistType = type;
+  globalHistOpenDates = new Set();
   document.getElementById('globalHistTitle').textContent = type==='in' ? 'ประวัติรับเข้าทั้งหมด' : 'ประวัติจ่ายออกทั้งหมด';
   document.getElementById('globalHistSearch').value = '';
   renderGlobalHistory('');
@@ -1275,6 +1321,43 @@ function openGlobalHistory(type){
 document.getElementById('histInBtn').addEventListener('click', ()=>openGlobalHistory('in'));
 document.getElementById('histOutBtn').addEventListener('click', ()=>openGlobalHistory('out'));
 document.getElementById('globalHistSearch').addEventListener('input', (e)=>renderGlobalHistory(e.target.value));
+document.getElementById('globalHistList').addEventListener('click', (e)=>{
+  const head = e.target.closest('.hist-day-head');
+  if(!head) return;
+  const day = head.closest('.hist-day');
+  const key = day.dataset.date;
+  if(globalHistOpenDates.has(key)) globalHistOpenDates.delete(key); else globalHistOpenDates.add(key);
+  day.classList.toggle('open');
+});
+
+function formatDateHeader(dateKey){
+  const d = new Date(dateKey+'T00:00:00');
+  const today = new Date().toISOString().slice(0,10);
+  const yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
+  const dateLabel = d.toLocaleDateString('th-TH', {day:'numeric', month:'short', year:'2-digit'});
+  if(dateKey === today) return `วันนี้ · ${dateLabel}`;
+  if(dateKey === yesterday) return `เมื่อวาน · ${dateLabel}`;
+  return dateLabel;
+}
+
+function renderDayRows(items){
+  return items.map(t=>{
+    const d = new Date(t.date);
+    const timeStr = d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+    const sign = t.type==='in' ? '+' : '−';
+    return `<div class="ledger-row">
+      <div class="ledger-left">
+        <div class="ledger-date">${timeStr}</div>
+        <div class="ledger-note" style="font-weight:600;color:var(--ink);white-space:normal;max-width:none;">${escapeHtml(t.productName)}</div>
+        ${t.note ? `<div class="ledger-note">${escapeHtml(t.note)}</div>` : ''}
+      </div>
+      <div class="ledger-right">
+        <div class="ledger-qty ${t.type}">${sign}${fmt(t.qty)}</div>
+        ${t.price!=null ? `<div class="ledger-bal">@${fmtMoney(t.price)}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
 
 function renderGlobalHistory(qRaw){
   const q = (qRaw||'').trim().toLowerCase();
@@ -1290,20 +1373,25 @@ function renderGlobalHistory(qRaw){
 
   const list = document.getElementById('globalHistList');
   if(items.length===0){ list.innerHTML = '<div class="ledger-empty">ไม่มีประวัติรายการ</div>'; return; }
-  list.innerHTML = items.map(t=>{
-    const d = new Date(t.date);
-    const dateStr = d.toLocaleDateString('th-TH',{day:'2-digit',month:'short',year:'2-digit'}) + ' · ' + d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
-    const sign = t.type==='in' ? '+' : '−';
-    return `<div class="ledger-row">
-      <div class="ledger-left">
-        <div class="ledger-date">${dateStr}</div>
-        <div class="ledger-note" style="font-weight:600;color:var(--ink);white-space:normal;max-width:none;">${escapeHtml(t.productName)}</div>
-        ${t.note ? `<div class="ledger-note">${escapeHtml(t.note)}</div>` : ''}
+
+  const groups = {};
+  items.forEach(t=>{
+    const key = t.date.slice(0,10);
+    (groups[key] = groups[key] || []).push(t);
+  });
+  const dateKeys = Object.keys(groups).sort((a,b)=>b.localeCompare(a));
+  if(globalHistOpenDates.size === 0 && dateKeys.length > 0) globalHistOpenDates.add(dateKeys[0]);
+
+  list.innerHTML = dateKeys.map(key=>{
+    const dayItems = groups[key];
+    const dayQty = dayItems.reduce((s,t)=>s+Number(t.qty||0),0);
+    const isOpen = globalHistOpenDates.has(key);
+    return `<div class="hist-day ${isOpen ? 'open' : ''}" data-date="${key}">
+      <div class="hist-day-head">
+        <span>${formatDateHeader(key)}</span>
+        <span class="meta">${dayItems.length} รายการ · ${fmt(dayQty)} หน่วย <span class="hist-day-toggle">▾</span></span>
       </div>
-      <div class="ledger-right">
-        <div class="ledger-qty ${t.type}">${sign}${fmt(t.qty)}</div>
-        ${t.price!=null ? `<div class="ledger-bal">@${fmtMoney(t.price)}</div>` : ''}
-      </div>
+      <div class="hist-day-body">${renderDayRows(dayItems)}</div>
     </div>`;
   }).join('');
 }
