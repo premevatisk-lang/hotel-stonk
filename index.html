@@ -218,6 +218,7 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
 .cat-mgr-clear:hover{background:var(--rust);color:#fff;}
 
 /* ---------- product movement chart ---------- */
+.chart-subtitle{font-family:'Kanit';font-weight:600;font-size:14px;color:var(--ink);margin-bottom:6px;}
 .chart-legend{display:flex;gap:18px;margin-top:10px;font-family:'Noto Sans Thai';font-size:12.5px;color:var(--ink-soft);flex-wrap:wrap;}
 .chart-legend-item{display:flex;align-items:center;gap:6px;font-weight:600;}
 .chart-legend .dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0;}
@@ -578,6 +579,12 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
       <button class="modal-close" data-close="chartOverlay">×</button>
     </div>
     <div class="modal-body">
+      <div class="field">
+        <label>เลือกดูสินค้า</label>
+        <select id="chartProductSelect">
+          <option value="">ทั้งหมด (รวมทุกสินค้า)</option>
+        </select>
+      </div>
       <div class="field-row">
         <div class="field">
           <label>ช่วงเวลา</label>
@@ -839,6 +846,7 @@ function renderAll(){
     renderCategoryMgr();
   }
   if(document.getElementById('chartOverlay') && document.getElementById('chartOverlay').classList.contains('show')){
+    renderChartProductOptions();
     renderProductChart();
   }
 }
@@ -981,6 +989,7 @@ document.getElementById('copyReorderBtn').addEventListener('click', copyReorderT
 
 // ---------- product movement chart (line chart, รับเข้า vs จ่ายออก แยกสี) ----------
 function openChartModal(){
+  renderChartProductOptions();
   document.getElementById('chartRangeSelect').value = '30';
   document.getElementById('chartCustomFromWrap').style.display = 'none';
   document.getElementById('chartCustomToWrap').style.display = 'none';
@@ -988,6 +997,14 @@ function openChartModal(){
   openOverlay('chartOverlay');
 }
 document.getElementById('chartBtn').addEventListener('click', openChartModal);
+function renderChartProductOptions(){
+  const sel = document.getElementById('chartProductSelect');
+  const current = sel.value;
+  const sorted = [...state.products].sort((a,b)=>a.name.localeCompare(b.name,'th'));
+  sel.innerHTML = '<option value="">ทั้งหมด (รวมทุกสินค้า)</option>' + sorted.map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join('');
+  sel.value = sorted.some(p=>p.id===current) ? current : '';
+}
+document.getElementById('chartProductSelect').addEventListener('change', renderProductChart);
 document.getElementById('chartRangeSelect').addEventListener('change', (e)=>{
   const isCustom = e.target.value === 'custom';
   document.getElementById('chartCustomFromWrap').style.display = isCustom ? 'block' : 'none';
@@ -997,7 +1014,7 @@ document.getElementById('chartRangeSelect').addEventListener('change', (e)=>{
 document.getElementById('chartFrom').addEventListener('change', renderProductChart);
 document.getElementById('chartTo').addEventListener('change', renderProductChart);
 
-function buildTimeSeries(fromDate, toDate){
+function buildTimeSeries(fromDate, toDate, productId){
   const start = new Date(fromDate); start.setHours(0,0,0,0);
   const end = new Date(toDate); end.setHours(0,0,0,0);
   const totalDays = Math.max(1, Math.round((end - start) / 86400000) + 1);
@@ -1010,6 +1027,7 @@ function buildTimeSeries(fromDate, toDate){
     buckets.push({ from: bucketStart, to: bucketEnd, in: 0, out: 0 });
   }
   state.transactions.forEach(t=>{
+    if(productId && t.productId !== productId) return;
     const dDay = new Date(t.date); dDay.setHours(0,0,0,0); // normalize to day, so time-of-day never causes a mismatch
     if(dDay < start || dDay > end) return;
     for(const b of buckets){
@@ -1081,14 +1099,16 @@ function renderProductChart(){
   }
   if(fromDate > toDate){ wrap.innerHTML = '<div class="ledger-empty">ช่วงวันที่ไม่ถูกต้อง</div>'; return; }
 
-  const buckets = buildTimeSeries(fromDate, toDate);
+  const productId = document.getElementById('chartProductSelect').value;
+  const selectedProduct = productId ? state.products.find(p=>p.id===productId) : null;
+  const buckets = buildTimeSeries(fromDate, toDate, productId);
   const totalIn = buckets.reduce((s,b)=>s+b.in, 0);
   const totalOut = buckets.reduce((s,b)=>s+b.out, 0);
   if(totalIn===0 && totalOut===0){
-    wrap.innerHTML = '<div class="ledger-empty">ไม่มีข้อมูลการเคลื่อนไหวในช่วงเวลานี้</div>';
+    wrap.innerHTML = (selectedProduct ? `<div class="chart-subtitle">${escapeHtml(selectedProduct.name)}</div>` : '') + '<div class="ledger-empty">ไม่มีข้อมูลการเคลื่อนไหวในช่วงเวลานี้</div>';
     return;
   }
-  wrap.innerHTML = buildLineChartSVG(buckets) + `
+  wrap.innerHTML = (selectedProduct ? `<div class="chart-subtitle">${escapeHtml(selectedProduct.name)}</div>` : '') + buildLineChartSVG(buckets) + `
     <div class="chart-legend">
       <span class="chart-legend-item"><span class="dot in"></span>รับเข้า — รวม ${fmt(totalIn)}</span>
       <span class="chart-legend-item"><span class="dot out"></span>จ่ายออก — รวม ${fmt(totalOut)}</span>
