@@ -218,14 +218,11 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
 .cat-mgr-clear:hover{background:var(--rust);color:#fff;}
 
 /* ---------- product movement chart ---------- */
-.chart-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dotted var(--border);}
-.chart-row:last-child{border-bottom:none;}
-.chart-rank{width:22px;height:22px;border-radius:50%;background:var(--paper-deep);color:var(--ink-soft);font-family:'IBM Plex Mono';font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.chart-info{flex:1;min-width:0;}
-.chart-name{font-family:'Kanit';font-weight:600;font-size:13px;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.chart-bar-wrap{background:var(--paper);border-radius:4px;height:10px;overflow:hidden;}
-.chart-bar{height:100%;background:linear-gradient(90deg,var(--green),var(--amber));border-radius:4px;transition:width .3s ease;}
-.chart-val{font-family:'IBM Plex Mono';font-size:12px;color:var(--ink-soft);white-space:nowrap;flex-shrink:0;min-width:64px;text-align:right;}
+.chart-legend{display:flex;gap:18px;margin-top:10px;font-family:'Noto Sans Thai';font-size:12.5px;color:var(--ink-soft);flex-wrap:wrap;}
+.chart-legend-item{display:flex;align-items:center;gap:6px;font-weight:600;}
+.chart-legend .dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0;}
+.chart-legend .dot.in{background:var(--green);}
+.chart-legend .dot.out{background:var(--rust);}
 
 /* ---------- history drawer ---------- */
 .hist-day{border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;}
@@ -581,10 +578,6 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
       <button class="modal-close" data-close="chartOverlay">×</button>
     </div>
     <div class="modal-body">
-      <div class="type-toggle" style="max-width:360px;">
-        <button type="button" id="chartTypeAllBtn" class="in active">รวม (รับเข้า+จ่ายออก)</button>
-        <button type="button" id="chartTypeOutBtn" class="out">เฉพาะจ่ายออก</button>
-      </div>
       <div class="field-row">
         <div class="field">
           <label>ช่วงเวลา</label>
@@ -733,7 +726,6 @@ let bulkSelectedCategory = '';
 let globalHistType = 'in';
 let globalHistOpenDates = new Set();
 let stockFilter = ''; // '', 'out', 'low'
-let chartMode = 'all'; // 'all' or 'out'
 let lastBulkCategory = '';
 
 // ---------- helpers ----------
@@ -987,11 +979,8 @@ async function copyReorderText(){
 }
 document.getElementById('copyReorderBtn').addEventListener('click', copyReorderText);
 
-// ---------- product movement chart ----------
+// ---------- product movement chart (line chart, รับเข้า vs จ่ายออก แยกสี) ----------
 function openChartModal(){
-  chartMode = 'all';
-  document.getElementById('chartTypeAllBtn').classList.add('active');
-  document.getElementById('chartTypeOutBtn').classList.remove('active');
   document.getElementById('chartRangeSelect').value = '30';
   document.getElementById('chartCustomFromWrap').style.display = 'none';
   document.getElementById('chartCustomToWrap').style.display = 'none';
@@ -999,18 +988,6 @@ function openChartModal(){
   openOverlay('chartOverlay');
 }
 document.getElementById('chartBtn').addEventListener('click', openChartModal);
-document.getElementById('chartTypeAllBtn').addEventListener('click', ()=>{
-  chartMode = 'all';
-  document.getElementById('chartTypeAllBtn').classList.add('active');
-  document.getElementById('chartTypeOutBtn').classList.remove('active');
-  renderProductChart();
-});
-document.getElementById('chartTypeOutBtn').addEventListener('click', ()=>{
-  chartMode = 'out';
-  document.getElementById('chartTypeOutBtn').classList.add('active');
-  document.getElementById('chartTypeAllBtn').classList.remove('active');
-  renderProductChart();
-});
 document.getElementById('chartRangeSelect').addEventListener('change', (e)=>{
   const isCustom = e.target.value === 'custom';
   document.getElementById('chartCustomFromWrap').style.display = isCustom ? 'block' : 'none';
@@ -1020,48 +997,102 @@ document.getElementById('chartRangeSelect').addEventListener('change', (e)=>{
 document.getElementById('chartFrom').addEventListener('change', renderProductChart);
 document.getElementById('chartTo').addEventListener('change', renderProductChart);
 
+function buildTimeSeries(fromDate, toDate){
+  const start = new Date(fromDate); start.setHours(0,0,0,0);
+  const end = new Date(toDate); end.setHours(0,0,0,0);
+  const totalDays = Math.max(1, Math.round((end - start) / 86400000) + 1);
+  const bucketDays = totalDays > 45 ? 7 : 1; // เกิน 45 วัน รวมเป็นรายสัปดาห์ให้อ่านง่ายขึ้น
+  const buckets = [];
+  for(let d = new Date(start); d <= end; d.setDate(d.getDate() + bucketDays)){
+    const bucketStart = new Date(d);
+    const bucketEndRaw = new Date(d); bucketEndRaw.setDate(bucketEndRaw.getDate() + bucketDays - 1);
+    const bucketEnd = bucketEndRaw > end ? end : bucketEndRaw;
+    buckets.push({ from: bucketStart, to: bucketEnd, in: 0, out: 0 });
+  }
+  state.transactions.forEach(t=>{
+    const dDay = new Date(t.date); dDay.setHours(0,0,0,0); // normalize to day, so time-of-day never causes a mismatch
+    if(dDay < start || dDay > end) return;
+    for(const b of buckets){
+      if(dDay >= b.from && dDay <= b.to){
+        if(t.type==='in') b.in += Number(t.qty||0); else b.out += Number(t.qty||0);
+        break;
+      }
+    }
+  });
+  return buckets;
+}
+
+function buildLineChartSVG(buckets){
+  const W = 640, H = 260;
+  const padL = 44, padR = 16, padT = 16, padB = 30;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+  const maxVal = Math.max(1, ...buckets.map(b=>Math.max(b.in, b.out)));
+  const n = buckets.length;
+  const xFor = (i)=> padL + (n<=1 ? plotW/2 : (i/(n-1))*plotW);
+  const yFor = (v)=> padT + plotH - (v/maxVal)*plotH;
+
+  let gridLines = '';
+  const gridCount = 4;
+  for(let g=0; g<=gridCount; g++){
+    const val = Math.round(maxVal * g / gridCount);
+    const y = yFor(val);
+    gridLines += `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" style="stroke:var(--border);" stroke-width="1" />`;
+    gridLines += `<text x="${padL-8}" y="${y+4}" text-anchor="end" font-size="10" style="fill:var(--ink-faint);" font-family="IBM Plex Mono">${fmt(val)}</text>`;
+  }
+
+  const maxLabels = 7;
+  const step = Math.max(1, Math.ceil(n / maxLabels));
+  let xLabels = '';
+  buckets.forEach((b,i)=>{
+    if(i % step !== 0 && i !== n-1) return;
+    const label = b.from.toLocaleDateString('th-TH', {day:'numeric', month:'short'});
+    xLabels += `<text x="${xFor(i)}" y="${H-padB+16}" text-anchor="middle" font-size="10" style="fill:var(--ink-faint);" font-family="IBM Plex Mono">${label}</text>`;
+  });
+
+  const pointsIn = buckets.map((b,i)=>`${xFor(i)},${yFor(b.in)}`).join(' ');
+  const pointsOut = buckets.map((b,i)=>`${xFor(i)},${yFor(b.out)}`).join(' ');
+  const dotsIn = buckets.map((b,i)=>`<circle cx="${xFor(i)}" cy="${yFor(b.in)}" r="3" style="fill:var(--green);"><title>${b.from.toLocaleDateString('th-TH')} — รับเข้า ${fmt(b.in)}</title></circle>`).join('');
+  const dotsOut = buckets.map((b,i)=>`<circle cx="${xFor(i)}" cy="${yFor(b.out)}" r="3" style="fill:var(--rust);"><title>${b.from.toLocaleDateString('th-TH')} — จ่ายออก ${fmt(b.out)}</title></circle>`).join('');
+
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;">
+    ${gridLines}
+    <polyline points="${pointsIn}" fill="none" style="stroke:var(--green);" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />
+    <polyline points="${pointsOut}" fill="none" style="stroke:var(--rust);" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />
+    ${dotsIn}
+    ${dotsOut}
+    ${xLabels}
+  </svg>`;
+}
+
 function renderProductChart(){
   const rangeSel = document.getElementById('chartRangeSelect').value;
   const now = new Date();
-  let fromDate = null, toDate = null;
-  if(rangeSel === '30'){ fromDate = new Date(now.getTime() - 30*86400000); toDate = now; }
-  else if(rangeSel === '90'){ fromDate = new Date(now.getTime() - 90*86400000); toDate = now; }
+  const wrap = document.getElementById('chartWrap');
+  let fromDate, toDate;
+  if(rangeSel === '30'){ fromDate = new Date(now.getTime() - 29*86400000); toDate = now; }
+  else if(rangeSel === '90'){ fromDate = new Date(now.getTime() - 89*86400000); toDate = now; }
   else {
     const f = document.getElementById('chartFrom').value;
     const t = document.getElementById('chartTo').value;
-    fromDate = f ? new Date(f+'T00:00:00') : null;
-    toDate = t ? new Date(t+'T23:59:59') : null;
+    if(!f || !t){ wrap.innerHTML = '<div class="ledger-empty">กรุณาเลือกวันที่เริ่มต้นและสิ้นสุด</div>'; return; }
+    fromDate = new Date(f+'T00:00:00');
+    toDate = new Date(t+'T23:59:59');
   }
+  if(fromDate > toDate){ wrap.innerHTML = '<div class="ledger-empty">ช่วงวันที่ไม่ถูกต้อง</div>'; return; }
 
-  const items = state.transactions.filter(t=>{
-    if(chartMode === 'out' && t.type !== 'out') return false;
-    const d = new Date(t.date);
-    if(fromDate && d < fromDate) return false;
-    if(toDate && d > toDate) return false;
-    return true;
-  });
-
-  const totals = {};
-  items.forEach(t=>{ totals[t.productId] = (totals[t.productId]||0) + Number(t.qty||0); });
-  const ranked = Object.entries(totals).map(([productId, qty])=>{
-    const p = state.products.find(x=>x.id===productId);
-    return { name: p ? p.name : 'สินค้าที่ถูกลบ', unit: p ? (p.unit||'ชิ้น') : '', qty };
-  }).sort((a,b)=>b.qty-a.qty).slice(0,10);
-
-  const wrap = document.getElementById('chartWrap');
-  if(ranked.length===0){ wrap.innerHTML = '<div class="ledger-empty">ไม่มีข้อมูลการเคลื่อนไหวในช่วงเวลานี้</div>'; return; }
-  const maxQty = ranked[0].qty || 1;
-  wrap.innerHTML = ranked.map((r,i)=>{
-    const pct = Math.max(4, Math.round((r.qty/maxQty)*100));
-    return `<div class="chart-row">
-      <div class="chart-rank">${i+1}</div>
-      <div class="chart-info">
-        <div class="chart-name">${escapeHtml(r.name)}</div>
-        <div class="chart-bar-wrap"><div class="chart-bar" style="width:${pct}%;"></div></div>
-      </div>
-      <div class="chart-val">${fmt(r.qty)} ${escapeHtml(r.unit)}</div>
+  const buckets = buildTimeSeries(fromDate, toDate);
+  const totalIn = buckets.reduce((s,b)=>s+b.in, 0);
+  const totalOut = buckets.reduce((s,b)=>s+b.out, 0);
+  if(totalIn===0 && totalOut===0){
+    wrap.innerHTML = '<div class="ledger-empty">ไม่มีข้อมูลการเคลื่อนไหวในช่วงเวลานี้</div>';
+    return;
+  }
+  wrap.innerHTML = buildLineChartSVG(buckets) + `
+    <div class="chart-legend">
+      <span class="chart-legend-item"><span class="dot in"></span>รับเข้า — รวม ${fmt(totalIn)}</span>
+      <span class="chart-legend-item"><span class="dot out"></span>จ่ายออก — รวม ${fmt(totalOut)}</span>
     </div>`;
-  }).join('');
 }
 document.getElementById('categoryMgrList').addEventListener('click', async (e)=>{
   const row = e.target.closest('.cat-mgr-row');
