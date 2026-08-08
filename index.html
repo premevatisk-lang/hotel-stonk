@@ -968,9 +968,14 @@ function printStockCheckList(){
   });
   const groupKeys = Object.keys(groups).sort((a,b)=>a.localeCompare(b,'th'));
 
+  const thumbHtml = (p)=> p.image
+    ? `<img src="${p.image}" alt="">`
+    : `<div class="ph">${escapeHtml((p.name||'?').slice(0,1).toUpperCase())}</div>`;
+
   const rowsHtml = (list)=> list
     .sort((a,b)=>a.name.localeCompare(b.name,'th'))
     .map(p=>`<tr>
+      <td class="thumbcell">${thumbHtml(p)}</td>
       <td>${escapeHtml(p.name)}</td>
       <td style="text-align:right;">${fmt(p.stock)} ${escapeHtml(p.unit||'ชิ้น')}</td>
       <td class="fillcell"></td>
@@ -980,7 +985,7 @@ function printStockCheckList(){
   const sectionsHtml = groupKeys.map(key=>{
     const title = key.startsWith('\uFFFF') ? 'ไม่มีหมวดหมู่' : key;
     return `<h2>${escapeHtml(title)} (${groups[key].length} รายการ)</h2>
-    <table><thead><tr><th>สินค้า</th><th>คงเหลือในระบบ</th><th>นับได้จริง</th><th>ผลต่าง</th></tr></thead>
+    <table><thead><tr><th></th><th>สินค้า</th><th>คงเหลือในระบบ</th><th>นับได้จริง</th><th>ผลต่าง</th></tr></thead>
     <tbody>${rowsHtml(groups[key])}</tbody></table>`;
   }).join('');
 
@@ -993,9 +998,17 @@ function printStockCheckList(){
     h2{font-size:14.5px;margin:22px 0 8px;padding:7px 12px;border-radius:6px;background:#EEF0E7;color:#202B22;}
     .meta{color:#5C6B5E;font-size:13px;margin-bottom:4px;}
     table{width:100%;border-collapse:collapse;font-size:13px;}
-    th,td{border:1px solid #D7DCC7;padding:6px 8px;text-align:left;}
+    th,td{border:1px solid #D7DCC7;padding:6px 8px;text-align:left;vertical-align:middle;}
     th{background:#EEF0E7;}
     td.fillcell{min-width:70px;}
+    td.thumbcell{width:44px;padding:4px;}
+    td.thumbcell img{width:36px;height:36px;object-fit:cover;border-radius:4px;border:1px solid #D7DCC7;display:block;}
+    td.thumbcell .ph{width:36px;height:36px;border-radius:4px;border:1px solid #D7DCC7;background:#EEF0E7;display:flex;align-items:center;justify-content:center;font-weight:700;color:#93A092;font-size:14px;}
+    @media print{
+      table{page-break-inside:auto;}
+      tr{page-break-inside:avoid;}
+      td.thumbcell img, td.thumbcell .ph{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    }
   </style></head><body>
   <h1>เช็คสต็อกสินค้าทั้งหมด</h1>
   <div class="meta">พิมพ์เมื่อ ${new Date().toLocaleString('th-TH')} · รวม ${items.length} รายการ · ยอดคงเหลือรวมในระบบ ${fmt(totalStock)} หน่วย</div>
