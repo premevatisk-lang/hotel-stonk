@@ -377,6 +377,7 @@ select.cat-filter:focus{outline:none;border-color:var(--ink);}
       </select>
       <button class="btn btn-ghost btn-sm" id="categoryMgrBtn" title="จัดการหมวดหมู่">⚙ หมวดหมู่</button>
       <button class="btn btn-ghost btn-sm" id="printReorderBtn" title="พิมพ์รายการสินค้าใกล้หมด/หมด">🖨 พิมพ์รายการที่ต้องสั่งซื้อ</button>
+      <button class="btn btn-ghost btn-sm" id="printStockCheckBtn" title="พิมพ์รายการสินค้าทั้งหมดพร้อมยอดคงเหลือ เพื่อเช็คสต็อกจริง">🖨 พิมพ์เช็คสต็อกทั้งหมด</button>
       <button class="btn btn-ghost btn-sm" id="copyReorderBtn" title="คัดลอกข้อความเพื่อส่งไลน์">📋 คัดลอกข้อความ</button>
       <button class="btn btn-ghost btn-sm" id="chartBtn" title="กราฟสรุปการเคลื่อนไหวสินค้า">📊 กราฟสรุป</button>
     </div>
@@ -946,6 +947,67 @@ function printReorderList(){
   w.document.close();
 }
 document.getElementById('printReorderBtn').addEventListener('click', printReorderList);
+
+// ---------- full stock check list: ALL products with current system stock,
+// plus blank columns to write the physically-counted amount and the difference ----------
+function printStockCheckList(){
+  if(state.products.length===0){ showToast('ยังไม่มีสินค้าในคลัง'); return; }
+
+  const cat = document.getElementById('catFilter').value;
+  const search = document.getElementById('searchInput').value.trim().toLowerCase();
+  let items = [...state.products];
+  if(cat) items = items.filter(p=>p.category===cat);
+  if(search) items = items.filter(p=> p.name.toLowerCase().includes(search) || (p.category||'').toLowerCase().includes(search));
+  if(items.length===0){ showToast('ไม่มีสินค้าที่ตรงกับตัวกรองปัจจุบัน'); return; }
+
+  // group by category for readability, uncategorized last
+  const groups = {};
+  items.forEach(p=>{
+    const key = p.category || '\uFFFFไม่มีหมวดหมู่';
+    (groups[key] = groups[key] || []).push(p);
+  });
+  const groupKeys = Object.keys(groups).sort((a,b)=>a.localeCompare(b,'th'));
+
+  const rowsHtml = (list)=> list
+    .sort((a,b)=>a.name.localeCompare(b.name,'th'))
+    .map(p=>`<tr>
+      <td>${escapeHtml(p.name)}</td>
+      <td style="text-align:right;">${fmt(p.stock)} ${escapeHtml(p.unit||'ชิ้น')}</td>
+      <td class="fillcell"></td>
+      <td class="fillcell"></td>
+    </tr>`).join('');
+
+  const sectionsHtml = groupKeys.map(key=>{
+    const title = key.startsWith('\uFFFF') ? 'ไม่มีหมวดหมู่' : key;
+    return `<h2>${escapeHtml(title)} (${groups[key].length} รายการ)</h2>
+    <table><thead><tr><th>สินค้า</th><th>คงเหลือในระบบ</th><th>นับได้จริง</th><th>ผลต่าง</th></tr></thead>
+    <tbody>${rowsHtml(groups[key])}</tbody></table>`;
+  }).join('');
+
+  const totalStock = items.reduce((s,p)=>s+Number(p.stock||0),0);
+
+  const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>เช็คสต็อกสินค้าทั้งหมด</title>
+  <style>
+    body{font-family:'Noto Sans Thai',sans-serif;padding:24px;color:#202B22;}
+    h1{font-size:20px;margin-bottom:4px;}
+    h2{font-size:14.5px;margin:22px 0 8px;padding:7px 12px;border-radius:6px;background:#EEF0E7;color:#202B22;}
+    .meta{color:#5C6B5E;font-size:13px;margin-bottom:4px;}
+    table{width:100%;border-collapse:collapse;font-size:13px;}
+    th,td{border:1px solid #D7DCC7;padding:6px 8px;text-align:left;}
+    th{background:#EEF0E7;}
+    td.fillcell{min-width:70px;}
+  </style></head><body>
+  <h1>เช็คสต็อกสินค้าทั้งหมด</h1>
+  <div class="meta">พิมพ์เมื่อ ${new Date().toLocaleString('th-TH')} · รวม ${items.length} รายการ · ยอดคงเหลือรวมในระบบ ${fmt(totalStock)} หน่วย</div>
+  ${sectionsHtml}
+  <script>window.onload = () => window.print();<\/script>
+  </body></html>`;
+  const w = window.open('', '_blank');
+  if(!w){ showToast('เบราว์เซอร์บล็อกป็อปอัป กรุณาอนุญาตแล้วลองใหม่'); return; }
+  w.document.write(html);
+  w.document.close();
+}
+document.getElementById('printStockCheckBtn').addEventListener('click', printStockCheckList);
 
 function buildReorderText(){
   const { outItems, lowItems } = getReorderItems();
